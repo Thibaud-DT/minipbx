@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Extensions - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Extensions</h1>
+    <p>Creer les postes internes et leurs identifiants SIP.</p>
+  </div>
+</section>
+
+{% if error %}<p class="alert danger">{{ error }}</p>{% endif %}
+
+<section class="panel">
+  <h2>Nouvelle extension</h2>
+  <form method="post" action="/extensions" class="form-grid">
+    <label>Numero
+      <input name="number" placeholder="101" pattern="[0-9]{2,6}" required>
+    </label>
+    <label>Nom
+      <input name="display_name" placeholder="Accueil" required>
+    </label>
+    <label>Email
+      <input name="email" type="email" placeholder="optionnel">
+    </label>
+    <label class="check"><input name="voicemail_enabled" type="checkbox" checked> Messagerie</label>
+    <label class="check"><input name="outbound_enabled" type="checkbox" checked> Sortant</label>
+    <button type="submit">Ajouter</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Postes</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Numero</th>
+        <th>Nom</th>
+        <th>Login SIP</th>
+        <th>Messagerie</th>
+        <th>Sortant</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for extension in extensions %}
+      <tr>
+        <td>{{ extension.number }}</td>
+        <td>{{ extension.display_name }}</td>
+        <td>{{ extension.sip_username }}</td>
+        <td>{{ "Oui" if extension.voicemail_enabled else "Non" }}</td>
+        <td>{{ "Oui" if extension.outbound_enabled else "Non" }}</td>
+        <td><a class="small-button" href="/extensions/{{ extension.id }}/edit">Modifier</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Aucune extension.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

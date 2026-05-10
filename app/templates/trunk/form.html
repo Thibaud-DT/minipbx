@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Trunk SIP - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Trunk SIP principal</h1>
+    <p>Configurer le compte operateur utilise pour les appels entrants et sortants.</p>
+  </div>
+</section>
+
+{% if error %}<p class="alert danger">{{ error }}</p>{% endif %}
+
+<section class="panel">
+  <form method="post" action="/trunk" class="form-grid trunk-grid">
+    <label>Nom
+      <input name="name" value="{{ trunk.name if trunk else 'Trunk principal' }}" required>
+    </label>
+    <label>Domaine ou IP operateur
+      <input name="host" value="{{ trunk.host if trunk else '' }}" placeholder="sip.operateur.example" required>
+    </label>
+    <label>Identifiant
+      <input name="username" value="{{ trunk.username if trunk else '' }}" autocomplete="off" required>
+    </label>
+    <label>Mot de passe
+      <input name="password" type="password" autocomplete="new-password" placeholder="{{ 'Laisser vide pour conserver' if trunk else '' }}" {% if not trunk %}required{% endif %}>
+    </label>
+    <label>From user
+      <input name="from_user" value="{{ trunk.from_user if trunk and trunk.from_user else '' }}">
+    </label>
+    <label>From domain
+      <input name="from_domain" value="{{ trunk.from_domain if trunk and trunk.from_domain else '' }}">
+    </label>
+    <label>Transport
+      <select name="transport">
+        {% set current_transport = trunk.transport if trunk else 'udp' %}
+        <option value="udp" {% if current_transport == 'udp' %}selected{% endif %}>UDP</option>
+        <option value="tcp" {% if current_transport == 'tcp' %}selected{% endif %}>TCP</option>
+        <option value="tls" {% if current_transport == 'tls' %}selected{% endif %}>TLS</option>
+      </select>
+    </label>
+    <label class="check"><input name="enabled" type="checkbox" {% if not trunk or trunk.enabled %}checked{% endif %}> Actif</label>
+    <button type="submit">Enregistrer</button>
+  </form>
+</section>
+
+{% if trunk %}
+<section class="panel">
+  <h2>Etat</h2>
+  <dl class="details">
+    <div><dt>Trunk</dt><dd>{{ trunk.name }}</dd></div>
+    <div><dt>Operateur</dt><dd>{{ trunk.host }}</dd></div>
+    <div><dt>Secret</dt><dd>Masque</dd></div>
+    <div><dt>Actif</dt><dd>{{ "Oui" if trunk.enabled else "Non" }}</dd></div>
+  </dl>
+</section>
+{% endif %}
+{% endblock %}

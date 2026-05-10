@@ -1,0 +1,113 @@
+<section class="grid monitoring-grid">
+  <article class="card">
+    <span class="metric">{{ snapshot.extensions|length }}</span>
+    <h2>Extensions</h2>
+  </article>
+  <article class="card">
+    <span class="metric">{{ snapshot.registered_count }}</span>
+    <h2>Enregistrees</h2>
+  </article>
+  <article class="card">
+    <span class="metric">{{ snapshot.active_call_count }}</span>
+    <h2>Canaux actifs</h2>
+  </article>
+  <article class="card">
+    <span class="badge {{ 'ok' if snapshot.enabled else 'warn' }}">{{ "Live" if snapshot.enabled else "Inactif" }}</span>
+    <h2>Supervision</h2>
+    <p>{{ snapshot.message }}</p>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Extensions</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Numero</th>
+        <th>Nom</th>
+        <th>Etat SIP</th>
+        <th>Appels</th>
+        <th>Contact</th>
+        <th>Latence</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for extension in snapshot.extensions %}
+      <tr>
+        <td>{{ extension.number }}</td>
+        <td>{{ extension.display_name }}</td>
+        <td>
+          <span class="badge {{ 'ok' if extension.registered else 'warn' }}">
+            {{ extension.status if extension.enabled else "desactivee" }}
+          </span>
+        </td>
+        <td>{{ extension.active_channels }}</td>
+        <td class="mono-cell">{{ extension.contact_uri if extension.contact_uri else "-" }}</td>
+        <td>{{ extension.latency_ms }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Aucune extension configuree.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Trunk SIP</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Operateur</th>
+        <th>Identifiant</th>
+        <th>Etat</th>
+        <th>Enregistrement</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for trunk in snapshot.trunks %}
+      <tr>
+        <td>{{ trunk.name }}</td>
+        <td>{{ trunk.host }}</td>
+        <td>{{ trunk.username }}</td>
+        <td><span class="badge {{ 'ok' if trunk.registered else 'warn' }}">{{ trunk.status if trunk.enabled else "desactive" }}</span></td>
+        <td class="mono-cell">{{ trunk.registration or "trunk-main-registration" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Aucun trunk configure.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Appels actifs</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Canal</th>
+        <th>Etat</th>
+        <th>Appelant</th>
+        <th>Destination</th>
+        <th>Application</th>
+        <th>Duree</th>
+        <th>Canal lie</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for call in snapshot.active_calls %}
+      <tr>
+        <td class="mono-cell">{{ call.channel }}</td>
+        <td><span class="badge {{ 'ok' if call.state == 'Up' else 'warn' }}">{{ call.state }}</span></td>
+        <td>{{ call.caller_id if call.caller_id else "-" }}</td>
+        <td>{{ call.extension }}</td>
+        <td>{{ call.application }} {{ call.data }}</td>
+        <td>{{ call.duration }}</td>
+        <td class="mono-cell">{{ call.bridged_channel if call.bridged_channel else "-" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">Aucun appel actif.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>

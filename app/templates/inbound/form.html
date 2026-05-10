@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Routage entrant - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Routage entrant</h1>
+    <p>Choisir la destination des appels recus depuis le trunk principal.</p>
+  </div>
+</section>
+
+{% if error %}<p class="alert danger">{{ error }}</p>{% endif %}
+
+<section class="panel">
+  <form method="post" action="/inbound" class="form-grid inbound-grid">
+    <label>Nom
+      <input name="name" value="{{ route.name if route else 'Route entrante principale' }}" required>
+    </label>
+    <label>Numero appele
+      <input name="did_number" value="{{ route.did_number if route and route.did_number else '' }}" placeholder="Optionnel">
+    </label>
+    <label class="check">
+      <input name="use_business_hours" type="checkbox" {% if route and route.use_business_hours %}checked{% endif %}>
+      Horaires actifs
+    </label>
+    <fieldset class="member-list">
+      <legend>Jours ouverts</legend>
+      {% set selected_days = route.business_days.split(',') if route and route.business_days else ['mon', 'tue', 'wed', 'thu', 'fri'] %}
+      {% for day in business_days %}
+        <label class="check"><input name="business_days" type="checkbox" value="{{ day }}" {% if day in selected_days %}checked{% endif %}> {{ business_day_labels[day] }}</label>
+      {% endfor %}
+    </fieldset>
+    <label>Ouverture
+      <input name="business_open_time" type="time" value="{{ route.business_open_time if route else '09:00' }}" required>
+    </label>
+    <label>Fermeture
+      <input name="business_close_time" type="time" value="{{ route.business_close_time if route else '18:00' }}" required>
+    </label>
+    <label>Fermetures exceptionnelles
+      <textarea name="holiday_dates" rows="3" placeholder="2026-12-25">{{ route.holiday_dates if route and route.holiday_dates else '' }}</textarea>
+    </label>
+
+    <label>Destination ouverte
+      {% set open_type = route.open_destination_type if route else 'extension' %}
+      <select name="open_destination_type">
+        <option value="extension" {% if open_type == 'extension' %}selected{% endif %}>Extension</option>
+        <option value="ring_group" {% if open_type == 'ring_group' %}selected{% endif %}>Groupe d'appel</option>
+        <option value="ivr" {% if open_type == 'ivr' %}selected{% endif %}>Standard</option>
+        <option value="voicemail" {% if open_type == 'voicemail' %}selected{% endif %}>Messagerie</option>
+        <option value="hangup" {% if open_type == 'hangup' %}selected{% endif %}>Raccrocher</option>
+      </select>
+    </label>
+    <label>Cible ouverte
+      <select name="open_destination_target">
+        <option value="">Aucune</option>
+        {% for extension in extensions %}
+          <option value="{{ extension.number }}" {% if route and route.open_destination_target == extension.number %}selected{% endif %}>Extension {{ extension.number }} - {{ extension.display_name }}</option>
+        {% endfor %}
+        {% for group in ring_groups %}
+          <option value="{{ group.number }}" {% if route and route.open_destination_target == group.number %}selected{% endif %}>Groupe {{ group.number }} - {{ group.name }}</option>
+        {% endfor %}
+        {% for menu in ivr_menus %}
+          <option value="{{ menu.number }}" {% if route and route.open_destination_target == menu.number %}selected{% endif %}>Standard {{ menu.number }} - {{ menu.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Destination fermee
+      {% set closed_type = route.closed_destination_type if route else 'hangup' %}
+      <select name="closed_destination_type">
+        <option value="hangup" {% if closed_type == 'hangup' %}selected{% endif %}>Raccrocher</option>
+        <option value="extension" {% if closed_type == 'extension' %}selected{% endif %}>Extension</option>
+        <option value="ring_group" {% if closed_type == 'ring_group' %}selected{% endif %}>Groupe d'appel</option>
+        <option value="ivr" {% if closed_type == 'ivr' %}selected{% endif %}>Standard</option>
+        <option value="voicemail" {% if closed_type == 'voicemail' %}selected{% endif %}>Messagerie</option>
+      </select>
+    </label>
+    <label>Cible fermee
+      <select name="closed_destination_target">
+        <option value="">Aucune</option>
+        {% for extension in extensions %}
+          <option value="{{ extension.number }}" {% if route and route.closed_destination_target == extension.number %}selected{% endif %}>Extension {{ extension.number }} - {{ extension.display_name }}</option>
+        {% endfor %}
+        {% for group in ring_groups %}
+          <option value="{{ group.number }}" {% if route and route.closed_destination_target == group.number %}selected{% endif %}>Groupe {{ group.number }} - {{ group.name }}</option>
+        {% endfor %}
+        {% for menu in ivr_menus %}
+          <option value="{{ menu.number }}" {% if route and route.closed_destination_target == menu.number %}selected{% endif %}>Standard {{ menu.number }} - {{ menu.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Enregistrer</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Comportement actuel</h2>
+  {% if route %}
+    <p>Horaires : {% if route.use_business_hours %}{{ route.business_open_time }}-{{ route.business_close_time }} / {{ route.business_days }}{% else %}desactives{% endif %}</p>
+    <p>Ouvert : {{ route.open_destination_type }} {{ route.open_destination_target or "" }}</p>
+    <p>Ferme : {{ route.closed_destination_type }} {{ route.closed_destination_target or "" }}</p>
+  {% else %}
+    <p>Aucune route entrante configuree. MiniPBX utilisera la premiere extension entrante active.</p>
+  {% endif %}
+</section>
+{% endblock %}

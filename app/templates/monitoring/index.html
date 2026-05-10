@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Supervision - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Supervision</h1>
+    <p>Etat temps reel des extensions SIP et des appels actifs.</p>
+  </div>
+</section>
+
+<section class="grid monitoring-grid">
+  <article class="card">
+    <span class="metric" data-monitoring="extensions-count">0</span>
+    <h2>Extensions</h2>
+  </article>
+  <article class="card">
+    <span class="metric" data-monitoring="registered-count">0</span>
+    <h2>Enregistrees</h2>
+  </article>
+  <article class="card">
+    <span class="metric" data-monitoring="active-call-count">0</span>
+    <h2>Canaux actifs</h2>
+  </article>
+  <article class="card">
+    <span class="badge warn" data-monitoring="connection-state">Connexion</span>
+    <h2>Flux</h2>
+    <p data-monitoring="message">Initialisation du WebSocket...</p>
+  </article>
+  <article class="card">
+    <span class="badge warn" data-monitoring="ami-state">AMI</span>
+    <h2>Evenements</h2>
+    <p data-monitoring="ami-message">En attente du flux Asterisk.</p>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Extensions</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Numero</th>
+        <th>Nom</th>
+        <th>Etat SIP</th>
+        <th>Appels</th>
+        <th>Contact</th>
+        <th>Latence</th>
+      </tr>
+    </thead>
+    <tbody data-monitoring="extensions-body">
+      <tr><td colspan="6">Chargement...</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Trunk SIP</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Operateur</th>
+        <th>Identifiant</th>
+        <th>Etat</th>
+        <th>Enregistrement</th>
+      </tr>
+    </thead>
+    <tbody data-monitoring="trunks-body">
+      <tr><td colspan="5">Chargement...</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Appels actifs</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Canal</th>
+        <th>Etat</th>
+        <th>Appelant</th>
+        <th>Destination</th>
+        <th>Application</th>
+        <th>Duree</th>
+        <th>Canal lie</th>
+      </tr>
+    </thead>
+    <tbody data-monitoring="calls-body">
+      <tr><td colspan="7">Chargement...</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<script>
+(() => {
+  const nodes = {
+    extensionsCount: document.querySelector('[data-monitoring="extensions-count"]'),
+    registeredCount: document.querySelector('[data-monitoring="registered-count"]'),
+    activeCallCount: document.querySelector('[data-monitoring="active-call-count"]'),
+    connectionState: document.querySelector('[data-monitoring="connection-state"]'),
+    message: document.querySelector('[data-monitoring="message"]'),
+    amiState: document.querySelector('[data-monitoring="ami-state"]'),
+    amiMessage: document.querySelector('[data-monitoring="ami-message"]'),
+    extensionsBody: document.querySelector('[data-monitoring="extensions-body"]'),
+    trunksBody: document.querySelector('[data-monitoring="trunks-body"]'),
+    callsBody: document.querySelector('[data-monitoring="calls-body"]'),
+  };
+
+  function setConnection(label, ok, message) {
+    nodes.connectionState.textContent = label;
+    nodes.connectionState.className = `badge ${ok ? 'ok' : 'warn'}`;
+    nodes.message.textContent = message;
+  }
+
+  function cell(row, value, className) {
+    const item = document.createElement('td');
+    item.textContent = value || '-';
+    if (className) item.className = className;
+    row.appendChild(item);
+  }
+
+  function badge(row, value, ok) {
+    const item = document.createElement('td');
+    const label = document.createElement('span');
+    label.className = `badge ${ok ? 'ok' : 'warn'}`;
+    label.textContent = value || '-';
+    item.appendChild(label);
+    row.appendChild(item);
+  }
+
+  function emptyRow(body, colspan, text) {
+    body.replaceChildren();
+    const row = document.createElement('tr');
+    const item = document.createElement('td');
+    item.colSpan = colspan;
+    item.textContent = text;
+    row.appendChild(item);
+    body.appendChild(row);
+  }
+
+  function render(snapshot) {
+    nodes.extensionsCount.textContent = snapshot.extensions.length;
+    nodes.registeredCount.textContent = snapshot.registered_count;
+    nodes.activeCallCount.textContent = snapshot.active_call_count;
+    setConnection(snapshot.enabled ? 'Live' : 'Inactif', snapshot.enabled, snapshot.message);
+    if (snapshot.ami) {
+      nodes.amiState.textContent = snapshot.ami.connected ? 'Connecte' : 'Deconnecte';
+      nodes.amiState.className = `badge ${snapshot.ami.connected ? 'ok' : 'warn'}`;
+      nodes.amiMessage.textContent = snapshot.ami.last_event
+        ? `${snapshot.ami.last_event} (${snapshot.ami.event_count})`
+        : 'Aucun evenement recu.';
+    }
+
+    nodes.extensionsBody.replaceChildren();
+    if (!snapshot.extensions.length) {
+      emptyRow(nodes.extensionsBody, 6, 'Aucune extension configuree.');
+    } else {
+      snapshot.extensions.forEach((extension) => {
+        const row = document.createElement('tr');
+        cell(row, extension.number);
+        cell(row, extension.display_name);
+        badge(row, extension.enabled ? extension.status : 'desactivee', extension.registered);
+        cell(row, String(extension.active_channels));
+        cell(row, extension.contact_uri, 'mono-cell');
+        cell(row, extension.latency_ms);
+        nodes.extensionsBody.appendChild(row);
+      });
+    }
+
+    nodes.trunksBody.replaceChildren();
+    if (!snapshot.trunks.length) {
+      emptyRow(nodes.trunksBody, 5, 'Aucun trunk configure.');
+    } else {
+      snapshot.trunks.forEach((trunk) => {
+        const row = document.createElement('tr');
+        cell(row, trunk.name);
+        cell(row, trunk.host);
+        cell(row, trunk.username);
+        badge(row, trunk.enabled ? trunk.status : 'desactive', trunk.registered);
+        cell(row, trunk.registration || 'trunk-main-registration', 'mono-cell');
+        nodes.trunksBody.appendChild(row);
+      });
+    }
+
+    nodes.callsBody.replaceChildren();
+    if (!snapshot.active_calls.length) {
+      emptyRow(nodes.callsBody, 7, 'Aucun appel actif.');
+    } else {
+      snapshot.active_calls.forEach((call) => {
+        const row = document.createElement('tr');
+        cell(row, call.channel, 'mono-cell');
+        badge(row, call.state, call.state === 'Up');
+        cell(row, call.caller_id);
+        cell(row, call.extension);
+        cell(row, `${call.application || ''} ${call.data || ''}`.trim());
+        cell(row, call.duration);
+        cell(row, call.bridged_channel, 'mono-cell');
+        nodes.callsBody.appendChild(row);
+      });
+    }
+  }
+
+  function connect() {
+    const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const socket = new WebSocket(`${scheme}://${window.location.host}/monitoring/ws`);
+    socket.addEventListener('open', () => setConnection('Connecte', true, 'Flux WebSocket ouvert.'));
+    socket.addEventListener('message', (event) => render(JSON.parse(event.data)));
+    socket.addEventListener('close', () => {
+      setConnection('Deconnecte', false, 'Flux WebSocket ferme. Nouvelle tentative...');
+      window.setTimeout(connect, 2000);
+    });
+    socket.addEventListener('error', () => socket.close());
+  }
+
+  connect();
+})();
+</script>
+{% endblock %}

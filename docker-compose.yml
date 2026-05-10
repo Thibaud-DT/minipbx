@@ -1,0 +1,53 @@
+services:
+  minipbx:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: minipbx
+    network_mode: host
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3.12", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    env_file:
+      - .env
+    volumes:
+      - minipbx_data:/var/lib/minipbx
+      - minipbx_asterisk_etc:/etc/asterisk
+      - minipbx_asterisk_spool:/var/spool/asterisk
+      - minipbx_asterisk_logs:/var/log/asterisk
+
+  minipbx-bridge:
+    profiles:
+      - bridge
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: minipbx-bridge
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3.12", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    env_file:
+      - .env
+    ports:
+      - "${MINIPBX_WEB_PORT:-8080}:8080/tcp"
+      - "${ASTERISK_SIP_PORT:-5060}:5060/udp"
+      - "${ASTERISK_RTP_START:-10000}-${ASTERISK_RTP_END:-10100}:${ASTERISK_RTP_START:-10000}-${ASTERISK_RTP_END:-10100}/udp"
+    volumes:
+      - minipbx_data:/var/lib/minipbx
+      - minipbx_asterisk_etc:/etc/asterisk
+      - minipbx_asterisk_spool:/var/spool/asterisk
+      - minipbx_asterisk_logs:/var/log/asterisk
+
+volumes:
+  minipbx_data:
+  minipbx_asterisk_etc:
+  minipbx_asterisk_spool:
+  minipbx_asterisk_logs:

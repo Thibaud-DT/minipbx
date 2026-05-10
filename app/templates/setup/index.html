@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Premier demarrage - MiniPBX{% endblock %}
+{% block content %}
+<section class="panel setup-panel">
+  <h1>Premier demarrage</h1>
+  <p>Creer l'administrateur et les reglages PBX essentiels. Tout reste modifiable ensuite.</p>
+  {% if error %}<p class="alert danger">{{ error }}</p>{% endif %}
+  <form method="post" action="/setup" class="stack">
+    <h2>Administrateur</h2>
+    <label>Identifiant
+      <input name="username" value="{{ form.username if form else 'admin' }}" autocomplete="username" required>
+    </label>
+    <label>Mot de passe
+      <input name="password" type="password" autocomplete="new-password" required minlength="10">
+    </label>
+    <label>Confirmation
+      <input name="password_confirm" type="password" autocomplete="new-password" required minlength="10">
+    </label>
+
+    <h2>Reseau PBX</h2>
+    {% set mode = form.network_mode if form else 'host' %}
+    <label>Mode reseau
+      <select name="network_mode">
+        <option value="host" {% if mode == 'host' %}selected{% endif %}>Production Linux - host</option>
+        <option value="bridge" {% if mode == 'bridge' %}selected{% endif %}>Developpement - bridge</option>
+      </select>
+    </label>
+    <label>Port SIP UDP
+      <input name="sip_port" type="number" min="1" max="65535" value="{{ form.sip_port if form else '5060' }}" required>
+    </label>
+    <div class="form-grid setup-rtp-grid">
+      <label>RTP debut
+        <input name="rtp_start" type="number" min="1" max="65535" value="{{ form.rtp_start if form else '10000' }}" required>
+      </label>
+      <label>RTP fin
+        <input name="rtp_end" type="number" min="1" max="65535" value="{{ form.rtp_end if form else '10100' }}" required>
+      </label>
+    </div>
+    <label>Adresse annoncee
+      <input name="external_address" value="{{ form.external_address if form else '' }}" placeholder="optionnel, ex: 192.168.1.42">
+    </label>
+    <label>Reseau local
+      <input name="local_net" value="{{ form.local_net if form else '192.168.1.0/24' }}" required>
+    </label>
+
+    <h2>Premiere extension</h2>
+    <div class="form-grid setup-rtp-grid">
+      <label>Numero
+        <input name="first_extension_number" value="{{ form.first_extension_number if form else '100' }}" pattern="[0-9]{2,6}" required>
+      </label>
+      <label>Nom
+        <input name="first_extension_name" value="{{ form.first_extension_name if form else 'Accueil' }}" required>
+      </label>
+    </div>
+    <label>Mot de passe SIP
+      <input name="first_extension_secret" placeholder="genere automatiquement si vide" minlength="10">
+    </label>
+
+    <h2>Trunk SIP optionnel</h2>
+    <label>Nom
+      <input name="trunk_name" value="{{ form.trunk_name if form else '' }}" placeholder="Operateur">
+    </label>
+    <label>Serveur SIP
+      <input name="trunk_host" value="{{ form.trunk_host if form else '' }}" placeholder="sip.operateur.example">
+    </label>
+    <label>Identifiant
+      <input name="trunk_username" value="{{ form.trunk_username if form else '' }}">
+    </label>
+    <label>Mot de passe trunk
+      <input name="trunk_password" type="password" autocomplete="new-password">
+    </label>
+    <div class="form-grid setup-rtp-grid">
+      <label>From user
+        <input name="trunk_from_user" value="{{ form.trunk_from_user if form else '' }}">
+      </label>
+      <label>From domain
+        <input name="trunk_from_domain" value="{{ form.trunk_from_domain if form else '' }}">
+      </label>
+    </div>
+
+    <button type="submit">Initialiser MiniPBX</button>
+  </form>
+</section>
+{% endblock %}

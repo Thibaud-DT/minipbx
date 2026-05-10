@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Configuration Asterisk - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Configuration Asterisk</h1>
+    <p>Previsualiser les fichiers que MiniPBX va generer avant application.</p>
+  </div>
+  <div class="actions">
+    <form method="post" action="/config/generate">
+      <button type="submit">Generer une revision</button>
+    </form>
+    <form method="post" action="/config/apply">
+      <button type="submit">Appliquer / reload</button>
+    </form>
+  </div>
+</section>
+
+{% if validation_issues %}
+<section class="panel">
+  <h2>Controle avant application</h2>
+  <ul class="issue-list">
+    {% for issue in validation_issues %}
+      <li class="{{ 'danger-text' if issue.level == 'error' else 'warn-text' }}">
+        {{ "Erreur bloquante" if issue.level == "error" else "Avertissement" }} : {{ issue.message }}
+      </li>
+    {% endfor %}
+  </ul>
+  {% if validation_issues | selectattr("level", "equalto", "error") | list %}
+    <p class="alert danger">Corrige les erreurs bloquantes avant de generer ou appliquer la configuration.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-title-row">
+    <h2>Test de configuration</h2>
+    <a class="small-button" href="/health">Sante Asterisk</a>
+  </div>
+  {% if config_test.checks %}
+    <ul class="issue-list">
+      {% for issue in config_test.checks %}
+        <li class="{{ 'danger-text' if issue.level == 'error' else 'warn-text' }}">
+          {{ "Erreur" if issue.level == "error" else "Avertissement" }} : {{ issue.message }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="alert success">Les fichiers generes passent les controles statiques.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="tabs">
+    {% for filename in configs %}
+      <a class="{{ 'active' if filename == selected else '' }}" href="/config/preview?selected={{ filename }}">{{ filename }}</a>
+    {% endfor %}
+  </div>
+  <pre class="config-preview"><code>{{ content }}</code></pre>
+</section>
+
+<section class="panel">
+  <h2>Historique des revisions</h2>
+  {% if revisions %}
+    <table>
+      <thead>
+        <tr>
+          <th>Revision</th>
+          <th>Date</th>
+          <th>Statut</th>
+          <th>Resume</th>
+          <th>Fichiers</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for revision in revisions %}
+        <tr>
+          <td>#{{ revision.id }}</td>
+          <td>{{ revision.created_at.strftime("%Y-%m-%d %H:%M:%S") if revision.created_at else "-" }}</td>
+          <td>
+            <span class="badge {{ 'ok' if revision.status == 'applied' else 'warn' }}">
+              {{ revision.status }}
+            </span>
+          </td>
+          <td>{{ revision.summary }}</td>
+          <td>
+            {% set files = revision_files.get(revision.id, []) %}
+            {{ files | length }}/{{ configs | length }}
+          </td>
+          <td>
+            <form method="post" action="/config/revisions/{{ revision.id }}/apply">
+              <button class="small-button" type="submit">Appliquer</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Aucune revision generee pour le moment.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Messagerie - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Messagerie vocale</h1>
+    <p>Messages vocaux stockes par Asterisk dans le volume persistant.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Messages</h2>
+  <table>
+    <thead>
+      <tr><th>Extension</th><th>Dossier</th><th>Appelant</th><th>Date</th><th>Duree</th><th>Taille</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for message in messages %}
+      <tr>
+        <td>{{ message.mailbox }} - {{ message.mailbox_name }}</td>
+        <td>{{ message.folder_label }}</td>
+        <td>{{ message.caller_id }}</td>
+        <td>{{ message.orig_date or "-" }}</td>
+        <td>{{ message.duration or "-" }}</td>
+        <td>{{ (message.size_bytes / 1024) | round(1) }} Ko</td>
+        <td>
+          <a class="small-button" href="{{ message.download_url }}">Telecharger</a>
+          <form method="post" action="{{ message.download_url }}/delete">
+            <button type="submit" class="small-button">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">Aucun message vocal.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Emplacement</h2>
+  <p><code>{{ spool_dir }}</code></p>
+</section>
+{% endblock %}

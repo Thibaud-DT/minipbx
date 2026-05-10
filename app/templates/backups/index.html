@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Sauvegardes - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Sauvegardes</h1>
+    <p>Telechargement des revisions MiniPBX et des sauvegardes Asterisk.</p>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="/backups/full.zip">Sauvegarde complete</a>
+  </div>
+</section>
+
+{% if notice %}<p class="alert success">{{ notice }}</p>{% endif %}
+{% if error %}<p class="alert danger">{{ error }}</p>{% endif %}
+{% if restart_required %}
+<section class="panel">
+  <h2>Redemarrage requis</h2>
+  <p class="alert warning">Une base SQLite importee a ete activee. Redemarre le conteneur MiniPBX avant de continuer a modifier la configuration.</p>
+  <pre><code>docker compose restart minipbx</code></pre>
+  <p>En profil bridge de developpement :</p>
+  <pre><code>docker compose --profile bridge restart minipbx-bridge</code></pre>
+</section>
+{% endif %}
+
+<section class="grid backups-grid">
+  <article class="card">
+    <h2>Revisions generees</h2>
+    <p>{{ revisions|length }} archive{{ "s" if revisions|length > 1 else "" }}</p>
+  </article>
+  <article class="card">
+    <h2>Sauvegardes Asterisk</h2>
+    <p>{{ backup_folders|length }} dossier{{ "s" if backup_folders|length > 1 else "" }}</p>
+  </article>
+  <article class="card">
+    <h2>Bases importees</h2>
+    <p>{{ staged_databases|length }} en attente</p>
+  </article>
+  <article class="card">
+    <h2>Dossier revisions</h2>
+    <p>{{ generated_config_dir }}</p>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Importer une sauvegarde complete</h2>
+  <form method="post" action="/backups/inspect" enctype="multipart/form-data" class="form-grid backup-import-grid">
+    <label>Archive ZIP MiniPBX
+      <input name="backup_file" type="file" accept=".zip,application/zip" required>
+    </label>
+    <button type="submit">Inspecter</button>
+  </form>
+  {% if import_report %}
+  <dl class="details import-report">
+    <div>
+      <dt>Etat</dt>
+      <dd>{{ import_report.message }}</dd>
+    </div>
+    <div>
+      <dt>Date archive</dt>
+      <dd>{{ import_report.created_at if import_report.created_at else "-" }}</dd>
+    </div>
+    <div>
+      <dt>Base SQLite</dt>
+      <dd>{{ "Presente" if import_report.has_database else "Absente" }}</dd>
+    </div>
+    <div>
+      <dt>Entrees</dt>
+      <dd>{{ import_report.entry_count }}</dd>
+    </div>
+    <div>
+      <dt>Revisions</dt>
+      <dd>{{ import_report.generated_count }} fichier(s)</dd>
+    </div>
+    <div>
+      <dt>Backups Asterisk</dt>
+      <dd>{{ import_report.asterisk_backup_count }} fichier(s)</dd>
+    </div>
+    <div>
+      <dt>Asterisk actif</dt>
+      <dd>{{ import_report.asterisk_current_count }} fichier(s)</dd>
+    </div>
+  </dl>
+  {% endif %}
+  <form method="post" action="/backups/apply-full" enctype="multipart/form-data" class="form-grid backup-import-grid import-apply-form">
+    <label>Archive ZIP inspectee
+      <input name="backup_file" type="file" accept=".zip,application/zip" required>
+    </label>
+    <label class="check"><input name="confirm_restore" type="checkbox"> Confirmer l'application</label>
+    <button type="submit" class="danger-button">Appliquer</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Bases SQLite importees en attente</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Import</th>
+        <th>Date</th>
+        <th>Taille</th>
+        <th>Chemin</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for staged in staged_databases %}
+      <tr>
+        <td>{{ staged.name }}</td>
+        <td>{{ staged.created_at.strftime("%Y-%m-%d %H:%M:%S") if staged.created_at else "-" }}</td>
+        <td>{{ staged.size_bytes }} octets</td>
+        <td>{{ staged.path }}</td>
+        <td>
+          <form method="post" action="/backups/activate-database/{{ staged.name }}" class="inline-confirm-form">
+            <label class="check"><input name="confirm_restore" type="checkbox"> Confirmer</label>
+            <button type="submit" class="small-button danger-link">Activer</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Aucune base importee en attente.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Revisions de configuration generees</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Statut</th>
+        <th>Resume</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for revision in revisions %}
+      <tr>
+        <td>{{ revision.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        <td>{{ revision.status }}</td>
+        <td>{{ revision.summary }}</td>
+        <td><a class="small-button" href="/backups/revisions/{{ revision.id }}.zip">Telecharger</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">Aucune revision generee.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Sauvegardes Asterisk avant application</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Dossier</th>
+        <th>Date</th>
+        <th>Fichiers</th>
+        <th>Taille</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for backup in backup_folders %}
+      <tr>
+        <td>{{ backup.name }}</td>
+        <td>{{ backup.created_at.strftime("%Y-%m-%d %H:%M:%S") if backup.created_at else "-" }}</td>
+        <td>{{ backup.file_count }}</td>
+        <td>{{ backup.size_bytes }} octets</td>
+        <td class="table-actions">
+          <a class="small-button" href="/backups/asterisk/{{ backup.name }}.zip">Telecharger</a>
+          <form method="post" action="/backups/asterisk/{{ backup.name }}/restore" class="inline-confirm-form">
+            <label class="check"><input name="confirm_restore" type="checkbox"> Confirmer</label>
+            <button type="submit" class="small-button danger-link">Restaurer</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Aucune sauvegarde Asterisk disponible.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

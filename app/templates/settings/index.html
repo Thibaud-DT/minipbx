@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+{% block title %}Configuration - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Configuration</h1>
+    <p>Parametres principaux du PBX regroupes dans une seule interface.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="tabs">
+    {% for tab_id, label in tabs.items() %}
+      {% set tab_issues = issues_by_section.get(tab_id, []) %}
+      <a class="{{ 'active' if tab == tab_id else '' }}" href="/settings?tab={{ tab_id }}">
+        {{ label }}
+        {% if tab_issues %}
+          <span class="tab-count {{ 'danger-text' if tab_issues | selectattr('level', 'equalto', 'error') | list else 'warn-text' }}">{{ tab_issues | length }}</span>
+        {% endif %}
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+{% set active_issues = issues_by_section.get(tab, []) %}
+{% if active_issues %}
+<section class="panel">
+  <h2>Controle de cette section</h2>
+  <ul class="issue-list">
+    {% for issue in active_issues %}
+      <li class="{{ 'danger-text' if issue.level == 'error' else 'warn-text' }}">
+        {{ "Erreur bloquante" if issue.level == "error" else "Avertissement" }} : {{ issue.message }}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if tab == "pbx" %}
+{% if request.query_params.get("error") %}
+  {% set pbx_errors = {
+    "mode-reseau-invalide": "le mode reseau est invalide",
+    "port-sip-invalide": "le port SIP doit etre compris entre 1 et 65535",
+    "plage-rtp-invalide": "la plage RTP est invalide",
+    "reseau-local-obligatoire": "le reseau local est obligatoire"
+  } %}
+  <p class="alert danger">Reglages PBX non enregistres : {{ pbx_errors.get(request.query_params.get("error"), request.query_params.get("error")) }}.</p>
+{% endif %}
+<section class="panel">
+  <h2>Reglages PBX</h2>
+  <form method="post" action="/settings/pbx" class="form-grid trunk-grid">
+    <label>Mode reseau
+      <select name="network_mode">
+        <option value="host" {% if pbx_settings.network_mode == "host" %}selected{% endif %}>Production Linux - host</option>
+        <option value="bridge" {% if pbx_settings.network_mode == "bridge" %}selected{% endif %}>Developpement - bridge</option>
+      </select>
+    </label>
+    <label>Port SIP UDP
+      <input name="sip_port" type="number" min="1" max="65535" value="{{ pbx_settings.sip_port }}" required>
+    </label>
+    <label>Adresse annoncee
+      <input name="external_address" value="{{ pbx_settings.external_address }}" placeholder="Optionnel, ex: 192.168.1.42">
+    </label>
+    <label>RTP debut
+      <input name="rtp_start" type="number" min="1" max="65535" value="{{ pbx_settings.rtp_start }}" required>
+    </label>
+    <label>RTP fin
+      <input name="rtp_end" type="number" min="1" max="65535" value="{{ pbx_settings.rtp_end }}" required>
+    </label>
+    <label>Reseau local
+      <input name="local_net" value="{{ pbx_settings.local_net }}" required>
+    </label>
+    <button type="submit">Enregistrer</button>
+  </form>
+  <p>Apres modification, applique la configuration depuis le menu pour recharger Asterisk.</p>
+</section>
+{% endif %}
+
+{% if tab == "extensions" %}
+<section class="panel">
+  <h2>Nouvelle extension</h2>
+  <form method="post" action="/extensions" class="form-grid">
+    <input name="next_url" type="hidden" value="/settings?tab=extensions">
+    <label>Numero
+      <input name="number" placeholder="101" pattern="[0-9]{2,6}" required>
+    </label>
+    <label>Nom
+      <input name="display_name" placeholder="Accueil" required>
+    </label>
+    <label>Email
+      <input name="email" type="email" placeholder="optionnel">
+    </label>
+    <label class="check"><input name="voicemail_enabled" type="checkbox" checked> Messagerie</label>
+    <label class="check"><input name="outbound_enabled" type="checkbox" checked> Sortant</label>
+    <button type="submit">Ajouter</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Postes</h2>
+  <table>
+    <thead>
+      <tr><th>Numero</th><th>Nom</th><th>Login SIP</th><th>Messagerie</th><th>Sortant</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for extension in extensions %}
+      <tr>
+        <td>{{ extension.number }}</td>
+        <td>{{ extension.display_name }}</td>
+        <td>{{ extension.sip_username }}</td>
+        <td>{{ "Oui" if extension.voicemail_enabled else "Non" }}</td>
+        <td>{{ "Oui" if extension.outbound_enabled else "Non" }}</td>
+        <td><a class="small-button" href="/extensions/{{ extension.id }}/edit">Modifier</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Aucune extension.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if tab == "groups" %}
+<section class="panel">
+  <h2>Nouveau groupe</h2>
+  <form method="post" action="/ring-groups" class="form-grid ring-group-grid">
+    <input name="next_url" type="hidden" value="/settings?tab=groups">
+    <label>Nom
+      <input name="name" placeholder="Accueil" required>
+    </label>
+    <label>Numero
+      <input name="number" placeholder="600" pattern="[0-9]{2,6}" required>
+    </label>
+    <label>Timeout
+      <input name="timeout_seconds" type="number" min="5" max="120" value="20" required>
+    </label>
+    <label>Secours
+      <select name="fallback_type">
+        <option value="hangup">Raccrocher</option>
+        <option value="extension">Extension</option>
+        <option value="voicemail">Messagerie</option>
+      </select>
+    </label>
+    <label>Cible secours
+      <select name="fallback_target">
+        <option value="">Aucune</option>
+        {% for extension in active_extensions %}
+          <option value="{{ extension.number }}">{{ extension.number }} - {{ extension.display_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <fieldset class="member-list">
+      <legend>Membres</legend>
+      {% for extension in active_extensions %}
+        <label class="check"><input name="member_ids" type="checkbox" value="{{ extension.id }}"> {{ extension.number }} - {{ extension.display_name }}</label>
+      {% else %}
+        <p>Aucune extension active.</p>
+      {% endfor %}
+    </fieldset>
+    <button type="submit">Ajouter</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Groupes existants</h2>
+  <table>
+    <thead>
+      <tr><th>Numero</th><th>Nom</th><th>Membres</th><th>Timeout</th><th>Secours</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for group in ring_groups %}
+      <tr>
+        <td>{{ group.number }}</td>
+        <td>{{ group.name }}</td>
+        <td>{% for member in group.members %}{{ member.extension.number }}{% if not loop.last %}, {% endif %}{% else %}Aucun{% endfor %}</td>
+        <td>{{ group.timeout_seconds }}s</td>
+        <td>{{ group.fallback_type }} {{ group.fallback_target or "" }}</td>
+        <td>
+          <form method="post" action="/ring-groups/{{ group.id }}/delete">
+            <input name="next_url" type="hidden" value="/settings?tab=groups">
+            <button type="submit" class="small-button">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Aucun groupe d'appel.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if tab == "ivr" %}
+{% if request.query_params.get("error") %}
+  {% set ivr_errors = {
+    "numero-standard-invalide": "le numero du standard doit contenir 2 a 6 chiffres",
+    "numero-deja-utilise": "ce numero est deja utilise",
+    "message-invalide": "le type de message est invalide",
+    "tts-indisponible": "le TTS n'est pas active sur cette installation",
+    "texte-tts-obligatoire": "le texte TTS est obligatoire",
+    "enregistrement-obligatoire": "un fichier audio est obligatoire en mode enregistrement",
+    "format-audio-invalide": "le fichier audio doit etre au format wav, gsm, sln, ulaw ou alaw",
+    "fichier-audio-invalide": "le fichier audio n'est pas lisible ou n'est pas un WAV PCM compatible",
+    "timeout-invalide": "le delai doit etre compris entre 3 et 30 secondes",
+    "secours-invalide": "la destination de secours est invalide",
+    "cible-secours-obligatoire": "la cible de secours est obligatoire",
+    "cible-secours-inconnue": "la cible de secours est inconnue",
+    "option-obligatoire": "au moins une touche doit etre configuree",
+    "touche-invalide": "la touche doit etre un chiffre",
+    "touche-dupliquee": "une touche est configuree plusieurs fois",
+    "destination-invalide": "la destination de touche est invalide",
+    "cible-obligatoire": "choisissez une cible pour la touche 1",
+    "cible-inconnue": "la cible choisie est inconnue",
+    "fichier-audio-trop-volumineux": "le fichier audio est trop volumineux"
+  } %}
+  <p class="alert danger">Standard non enregistre : {{ ivr_errors.get(request.query_params.get("error"), request.query_params.get("error")) }}.</p>
+{% endif %}
+<section class="panel">
+  <h2>Nouveau standard</h2>
+  <form method="post" action="/ivr" enctype="multipart/form-data" class="form-grid ivr-grid">
+    <input name="next_url" type="hidden" value="/settings?tab=ivr">
+    <label>Nom
+      <input name="name" placeholder="Standard accueil" required>
+    </label>
+    <label>Numero interne
+      <input name="number" placeholder="700" pattern="[0-9]{2,6}" required>
+    </label>
+    <label>Message
+      <select name="prompt_mode">
+        <option value="recording">Enregistrement</option>
+        <option value="tts" {% if tts_backend == "none" %}disabled{% endif %}>Texte TTS</option>
+      </select>
+    </label>
+    <label>Fichier audio
+      <input name="prompt_file" type="file" accept=".wav,.gsm,.sln,.ulaw,.alaw,audio/*">
+    </label>
+    <label>Texte TTS
+      <input name="prompt_text" placeholder="Bonjour, tapez 1 pour...">
+    </label>
+    <label>Attente
+      <input name="timeout_seconds" type="number" min="3" max="30" value="8" required>
+    </label>
+    <label>Secours
+      <select name="fallback_type">
+        <option value="hangup">Raccrocher</option>
+        <option value="extension">Extension</option>
+        <option value="ring_group">Groupe d'appel</option>
+      </select>
+    </label>
+    <label>Cible secours
+      <select name="fallback_target">
+        <option value="">Aucune</option>
+        {% for extension in active_extensions %}
+          <option value="{{ extension.number }}">Extension {{ extension.number }} - {{ extension.display_name }}</option>
+        {% endfor %}
+        {% for group in ring_groups %}
+          <option value="{{ group.number }}">Groupe {{ group.number }} - {{ group.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="check"><input name="enabled" type="checkbox" checked> Actif</label>
+    <fieldset class="ivr-options">
+      <legend>Touches</legend>
+      {% for digit in ["1"] %}
+      <div class="ivr-option-row">
+        <input name="option_digits" value="{{ digit }}" pattern="[0-9]" aria-label="Touche {{ digit }}">
+        <select name="option_destination_types" aria-label="Destination touche {{ digit }}">
+          {% if active_extensions %}
+            <option value="extension">Extension</option>
+          {% endif %}
+          {% if ring_groups %}
+            <option value="ring_group" {% if not active_extensions %}selected{% endif %}>Groupe d'appel</option>
+          {% endif %}
+        </select>
+        <select name="option_destination_targets" aria-label="Cible touche {{ digit }}" required>
+          {% if not active_extensions and not ring_groups %}
+            <option value="">Aucune cible disponible</option>
+          {% endif %}
+          {% for extension in active_extensions %}
+            <option value="{{ extension.number }}">Extension {{ extension.number }} - {{ extension.display_name }}</option>
+          {% endfor %}
+          {% for group in ring_groups %}
+            <option value="{{ group.number }}">Groupe {{ group.number }} - {{ group.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </fieldset>
+    <button type="submit">Ajouter</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Standards existants</h2>
+  <table>
+    <thead>
+      <tr><th>Numero</th><th>Nom</th><th>Message</th><th>Touches</th><th>Secours</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for menu in ivr_menus %}
+      <tr>
+        <td>{{ menu.number }}</td>
+        <td>{{ menu.name }}</td>
+        <td>
+          {{ "TTS" if menu.prompt_mode == "tts" else "Enregistrement" }}
+          {% if menu.prompt_mode == "tts" and tts_backend == "none" %}
+            <span class="badge warn">Indisponible</span>
+          {% endif %}
+        </td>
+        <td>{% for option in menu.options %}{{ option.digit }} -> {{ option.destination_target }}{% if not loop.last %}, {% endif %}{% else %}Aucune{% endfor %}</td>
+        <td>{{ menu.fallback_type }} {{ menu.fallback_target or "" }}</td>
+        <td>
+          <a class="small-button" href="/ivr/{{ menu.id }}/edit">Modifier</a>
+          <form method="post" action="/ivr/{{ menu.id }}/delete">
+            <input name="next_url" type="hidden" value="/settings?tab=ivr">
+            <button type="submit" class="small-button">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Aucun standard.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if tab == "inbound" %}
+<section class="panel">
+  <h2>Nouvelle route entrante</h2>
+  <form method="post" action="/inbound" class="form-grid inbound-grid">
+    <input name="next_url" type="hidden" value="/settings?tab=inbound">
+    <label>Nom
+      <input name="name" value="Route entrante" required>
+    </label>
+    <label>Numero appele
+      <input name="did_number" placeholder="Optionnel, ex. 0123456789">
+    </label>
+    <label class="check"><input name="use_business_hours" type="checkbox"> Horaires actifs</label>
+    <fieldset class="member-list">
+      <legend>Jours ouverts</legend>
+      {% set selected_days = ['mon', 'tue', 'wed', 'thu', 'fri'] %}
+      {% for day in business_days %}
+        <label class="check"><input name="business_days" type="checkbox" value="{{ day }}" {% if day in selected_days %}checked{% endif %}> {{ business_day_labels[day] }}</label>
+      {% endfor %}
+    </fieldset>
+    <label>Ouverture
+      <input name="business_open_time" type="time" value="09:00" required>
+    </label>
+    <label>Fermeture
+      <input name="business_close_time" type="time" value="18:00" required>
+    </label>
+    <label>Fermetures exceptionnelles
+      <textarea name="holiday_dates" rows="3" placeholder="2026-12-25"></textarea>
+    </label>
+    <label>Destination ouverte
+      {% set open_type = 'extension' %}
+      <select name="open_destination_type">
+        <option value="extension" {% if open_type == 'extension' %}selected{% endif %}>Extension</option>
+        <option value="ring_group" {% if open_type == 'ring_group' %}selected{% endif %}>Groupe d'appel</option>
+        <option value="ivr" {% if open_type == 'ivr' %}selected{% endif %}>Standard</option>
+        <option value="voicemail" {% if open_type == 'voicemail' %}selected{% endif %}>Messagerie</option>
+        <option value="hangup" {% if open_type == 'hangup' %}selected{% endif %}>Raccrocher</option>
+      </select>
+    </label>
+    <label>Cible ouverte
+      <select name="open_destination_target">
+        <option value="">Aucune</option>
+        {% for extension in active_extensions %}
+          <option value="{{ extension.number }}">Extension {{ extension.number }} - {{ extension.display_name }}</option>
+        {% endfor %}
+        {% for group in ring_groups %}
+          <option value="{{ group.number }}">Groupe {{ group.number }} - {{ group.name }}</option>
+        {% endfor %}
+        {% for menu in ivr_menus %}
+          <option value="{{ menu.number }}">Standard {{ menu.number }} - {{ menu.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Destination fermee
+      {% set closed_type = 'hangup' %}
+      <select name="closed_destination_type">
+        <option value="hangup" {% if closed_type == 'hangup' %}selected{% endif %}>Raccrocher</option>
+        <option value="extension" {% if closed_type == 'extension' %}selected{% endif %}>Extension</option>
+        <option value="ring_group" {% if closed_type == 'ring_group' %}selected{% endif %}>Groupe d'appel</option>
+        <option value="ivr" {% if closed_type == 'ivr' %}selected{% endif %}>Standard</option>
+        <option value="voicemail" {% if closed_type == 'voicemail' %}selected{% endif %}>Messagerie</option>
+      </select>
+    </label>
+    <label>Cible fermee
+      <select name="closed_destination_target">
+        <option value="">Aucune</option>
+        {% for extension in active_extensions %}
+          <option value="{{ extension.number }}">Extension {{ extension.number }} - {{ extension.display_name }}</option>
+        {% endfor %}
+        {% for group in ring_groups %}
+          <option value="{{ group.number }}">Groupe {{ group.number }} - {{ group.name }}</option>
+        {% endfor %}
+        {% for menu in ivr_menus %}
+          <option value="{{ menu.number }}">Standard {{ menu.number }} - {{ menu.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Enregistrer</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Routes entrantes</h2>
+  <table>
+    <thead>
+      <tr><th>Numero appele</th><th>Nom</th><th>Horaires</th><th>Ouvert</th><th>Ferme</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for inbound in inbound_routes %}
+      <tr>
+        <td>{{ inbound.did_number or "Par defaut" }}</td>
+        <td>{{ inbound.name }}</td>
+        <td>{% if inbound.use_business_hours %}{{ inbound.business_open_time }}-{{ inbound.business_close_time }}{% else %}Toujours ouvert{% endif %}</td>
+        <td>{{ inbound.open_destination_type }} {{ inbound.open_destination_target or "" }}</td>
+        <td>{{ inbound.closed_destination_type }} {{ inbound.closed_destination_target or "" }}</td>
+        <td>
+          <a class="small-button" href="/inbound/{{ inbound.id }}/edit">Modifier</a>
+          <form method="post" action="/inbound/{{ inbound.id }}/delete">
+            <button type="submit" class="small-button">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Aucune route entrante.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if tab == "outbound" %}
+{% if not active_trunk %}<p class="alert danger">Aucun trunk actif. Les regles seront generees quand un trunk sera configure.</p>{% endif %}
+<section class="panel">
+  <h2>Appels sortants</h2>
+  <form method="post" action="/outbound" class="form-grid outbound-grid">
+    <input name="next_url" type="hidden" value="/settings?tab=outbound">
+    <label>Nom
+      <input name="name" value="{{ rule.name if rule else 'Regles sortantes principales' }}" required>
+    </label>
+    <label>Prefixe de sortie
+      <input name="prefix" value="{{ rule.prefix if rule and rule.prefix else '' }}" pattern="[0-9]{0,4}" placeholder="Optionnel, ex. 0">
+    </label>
+    <label>Urgences
+      <input name="emergency_numbers" value="{{ rule.emergency_numbers if rule else '15,17,18,112' }}" required>
+    </label>
+    <label class="check"><input name="allow_national" type="checkbox" {% if not rule or rule.allow_national %}checked{% endif %}> Nationaux fixes</label>
+    <label class="check"><input name="allow_mobile" type="checkbox" {% if not rule or rule.allow_mobile %}checked{% endif %}> Mobiles</label>
+    <label class="check"><input name="allow_international" type="checkbox" {% if rule and rule.allow_international %}checked{% endif %}> International</label>
+    <button type="submit">Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if tab == "trunk" %}
+<section class="panel">
+  <h2>Trunk SIP principal</h2>
+  <form method="post" action="/trunk" class="form-grid trunk-grid">
+    <input name="next_url" type="hidden" value="/settings?tab=trunk">
+    <label>Nom
+      <input name="name" value="{{ trunk.name if trunk else 'Trunk principal' }}" required>
+    </label>
+    <label>Domaine ou IP operateur
+      <input name="host" value="{{ trunk.host if trunk else '' }}" placeholder="sip.operateur.example" required>
+    </label>
+    <label>Identifiant
+      <input name="username" value="{{ trunk.username if trunk else '' }}" autocomplete="off" required>
+    </label>
+    <label>Mot de passe
+      <input name="password" type="password" autocomplete="new-password" placeholder="{{ 'Laisser vide pour conserver' if trunk else '' }}" {% if not trunk %}required{% endif %}>
+    </label>
+    <label>From user
+      <input name="from_user" value="{{ trunk.from_user if trunk and trunk.from_user else '' }}">
+    </label>
+    <label>From domain
+      <input name="from_domain" value="{{ trunk.from_domain if trunk and trunk.from_domain else '' }}">
+    </label>
+    <label>Transport
+      <select name="transport">
+        {% set current_transport = trunk.transport if trunk else 'udp' %}
+        <option value="udp" {% if current_transport == 'udp' %}selected{% endif %}>UDP</option>
+        <option value="tcp" {% if current_transport == 'tcp' %}selected{% endif %}>TCP</option>
+        <option value="tls" {% if current_transport == 'tls' %}selected{% endif %}>TLS</option>
+      </select>
+    </label>
+    <label class="check"><input name="enabled" type="checkbox" {% if not trunk or trunk.enabled %}checked{% endif %}> Actif</label>
+    <button type="submit">Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if tab == "asterisk" %}
+<section class="heading">
+  <div>
+    <h2>Configuration Asterisk generee</h2>
+  </div>
+</section>
+{% if validation_issues %}
+<section class="panel">
+  <h2>Controle avant application</h2>
+  <ul class="issue-list">
+    {% for issue in validation_issues %}
+      <li class="{{ 'danger-text' if issue.level == 'error' else 'warn-text' }}">
+        {{ "Erreur bloquante" if issue.level == "error" else "Avertissement" }} : {{ issue.message }}
+      </li>
+    {% endfor %}
+  </ul>
+  {% if validation_issues | selectattr("level", "equalto", "error") | list %}
+    <p class="alert danger">Corrige les erreurs bloquantes avant de generer ou appliquer la configuration.</p>
+  {% endif %}
+</section>
+{% endif %}
+<section class="panel">
+  <div class="tabs">
+    {% for filename in configs %}
+      <a class="{{ 'active' if filename == selected else '' }}" href="/settings?tab=asterisk&selected={{ filename }}">{{ filename }}</a>
+    {% endfor %}
+  </div>
+  <pre class="config-preview"><code>{{ content }}</code></pre>
+</section>
+<section class="panel">
+  <h2>Derniere revision sauvegardee</h2>
+  {% if last_revision %}
+    <p>Revision {{ last_revision.id }} - {{ last_revision.status }} - {{ last_revision.generated_path }}</p>
+    {% if generated_files %}
+      <ul>{% for filename in generated_files %}<li>{{ filename }}</li>{% endfor %}</ul>
+    {% endif %}
+  {% else %}
+    <p>Aucune revision generee pour le moment.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

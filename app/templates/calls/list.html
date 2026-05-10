@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Appels - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Journal d'appels</h1>
+    <p>Consultation des CDR Asterisk generes par le PBX.</p>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="/calls/export.csv{% if export_query %}?{{ export_query }}{% endif %}">Exporter CSV</a>
+  </div>
+</section>
+
+{% if error %}<p class="alert danger">{{ error }}</p>{% endif %}
+
+<section class="panel">
+  <h2>Filtres</h2>
+  <form method="get" action="/calls" class="form-grid calls-filter-grid">
+    <label>Date
+      <input name="date" type="date" value="{{ filters.date }}">
+    </label>
+    <label>Extension
+      <select name="extension">
+        <option value="">Toutes</option>
+        {% for extension in extensions %}
+        <option value="{{ extension.number }}" {% if filters.extension == extension.number %}selected{% endif %}>
+          {{ extension.number }} - {{ extension.display_name }}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Direction
+      <select name="direction">
+        <option value="all" {% if filters.direction == "all" %}selected{% endif %}>Toutes</option>
+        <option value="entrant" {% if filters.direction == "entrant" %}selected{% endif %}>Entrant</option>
+        <option value="sortant" {% if filters.direction == "sortant" %}selected{% endif %}>Sortant</option>
+        <option value="interne" {% if filters.direction == "interne" %}selected{% endif %}>Interne</option>
+        <option value="inconnu" {% if filters.direction == "inconnu" %}selected{% endif %}>Inconnu</option>
+      </select>
+    </label>
+    <button type="submit">Filtrer</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Appels recents</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Appelant</th>
+        <th>Appele</th>
+        <th>Direction</th>
+        <th>Statut</th>
+        <th>Duree</th>
+        <th>Facture</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for record in records %}
+      <tr>
+        <td>{{ record.started_at.strftime("%Y-%m-%d %H:%M:%S") if record.started_at else "-" }}</td>
+        <td>{{ record.src or "-" }}</td>
+        <td>{{ record.dst or "-" }}</td>
+        <td>{{ record.direction }}</td>
+        <td>{{ record.disposition or "-" }}</td>
+        <td>{{ record.duration }} s</td>
+        <td>{{ record.billsec }} s</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">Aucun appel trouve. Verifiez que les CDR Asterisk sont actifs dans {{ cdr_path }}.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

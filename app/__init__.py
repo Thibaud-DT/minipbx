@@ -1,0 +1,1 @@
+"""MiniPBX application package."""

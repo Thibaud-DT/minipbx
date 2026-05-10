@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Diagnostics - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Diagnostics</h1>
+    <p>Etat Asterisk, PJSIP et informations reseau utiles au depannage.</p>
+  </div>
+  {% if asterisk_enabled %}
+  <div class="actions">
+    <form method="post" action="/diagnostics/rtp-debug/on">
+      <button type="submit" class="secondary">Debug RTP on</button>
+    </form>
+    <form method="post" action="/diagnostics/rtp-debug/off">
+      <button type="submit" class="secondary">Debug RTP off</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+
+<section class="grid diagnostics-grid">
+  <article class="card">
+    <h2>SIP</h2>
+    <p>UDP {{ sip_port }}</p>
+  </article>
+  <article class="card">
+    <h2>RTP</h2>
+    <p>UDP {{ rtp_start }}-{{ rtp_end }}</p>
+  </article>
+  <article class="card">
+    <h2>Adresse annoncee</h2>
+    <p>{{ external_address if external_address else "Automatique" }}</p>
+  </article>
+  <article class="card">
+    <h2>Reseau local</h2>
+    <p>{{ local_net }}</p>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Commandes de verification</h2>
+  <dl class="details">
+    <div>
+      <dt>Extensions</dt>
+      <dd><code>asterisk -C /etc/asterisk/asterisk.conf -rx "pjsip show endpoints"</code></dd>
+    </div>
+    <div>
+      <dt>Contacts</dt>
+      <dd><code>asterisk -C /etc/asterisk/asterisk.conf -rx "pjsip show contacts"</code></dd>
+    </div>
+    <div>
+      <dt>Trunk</dt>
+      <dd><code>asterisk -C /etc/asterisk/asterisk.conf -rx "pjsip show registrations"</code></dd>
+    </div>
+    <div>
+      <dt>RTP en direct</dt>
+      <dd><code>asterisk -C /etc/asterisk/asterisk.conf -rx "rtp set debug on"</code></dd>
+    </div>
+  </dl>
+</section>
+
+{% for result in results %}
+<section class="panel">
+  <div class="panel-title-row">
+    <h2>{{ result.name }}</h2>
+    {% if result.command %}<code>{{ result.command }}</code>{% endif %}
+  </div>
+  <span class="badge {{ 'ok' if result.ok else 'warn' }}">{{ "OK" if result.ok else "Attention" }}</span>
+  <pre class="config-preview diagnostics-output">{{ result.output }}</pre>
+</section>
+{% endfor %}
+{% endblock %}

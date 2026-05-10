@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Appels sortants - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Appels sortants</h1>
+    <p>Definir les numeros autorises et le prefixe de sortie via le trunk principal.</p>
+  </div>
+</section>
+
+{% if error %}<p class="alert danger">{{ error }}</p>{% endif %}
+{% if not trunk %}<p class="alert danger">Aucun trunk actif. Les regles seront generees quand un trunk sera configure.</p>{% endif %}
+
+<section class="panel">
+  <form method="post" action="/outbound" class="form-grid outbound-grid">
+    <label>Nom
+      <input name="name" value="{{ rule.name if rule else 'Regles sortantes principales' }}" required>
+    </label>
+    <label>Prefixe de sortie
+      <input name="prefix" value="{{ rule.prefix if rule and rule.prefix else '' }}" pattern="[0-9]{0,4}" placeholder="Optionnel, ex. 0">
+    </label>
+    <label>Urgences
+      <input name="emergency_numbers" value="{{ rule.emergency_numbers if rule else '15,17,18,112' }}" required>
+    </label>
+    <label class="check"><input name="allow_national" type="checkbox" {% if not rule or rule.allow_national %}checked{% endif %}> Nationaux fixes</label>
+    <label class="check"><input name="allow_mobile" type="checkbox" {% if not rule or rule.allow_mobile %}checked{% endif %}> Mobiles</label>
+    <label class="check"><input name="allow_international" type="checkbox" {% if rule and rule.allow_international %}checked{% endif %}> International</label>
+    <button type="submit">Enregistrer</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Regles generees</h2>
+  {% set current_prefix = rule.prefix if rule and rule.prefix else '' %}
+  <ul>
+    <li>Urgences : {{ rule.emergency_numbers if rule else '15,17,18,112' }}</li>
+    <li>Prefixe : {{ current_prefix if current_prefix else "aucun" }}</li>
+    <li>International : {{ "autorise" if rule and rule.allow_international else "bloque" }}</li>
+  </ul>
+</section>
+{% endblock %}

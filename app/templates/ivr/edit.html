@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Modifier standard - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Standard {{ menu.number }}</h1>
+    <p>Message d'accueil, touche DTMF et destination de secours.</p>
+  </div>
+  <a class="small-button" href="/settings?tab=ivr">Retour</a>
+</section>
+
+{% if error_label %}<p class="alert danger">{{ error_label }}</p>{% endif %}
+
+<section class="panel">
+  <h2>Parametres</h2>
+  <form method="post" action="/ivr/{{ menu.id }}" enctype="multipart/form-data" class="form-grid ivr-grid">
+    <input name="next_url" type="hidden" value="/settings?tab=ivr">
+    <label>Nom
+      <input name="name" value="{{ menu.name }}" required>
+    </label>
+    <label>Numero interne
+      <input name="number" value="{{ menu.number }}" pattern="[0-9]{2,6}" required>
+    </label>
+    <label>Message
+      <select name="prompt_mode">
+        <option value="recording" {% if menu.prompt_mode == "recording" %}selected{% endif %}>Enregistrement</option>
+        <option value="tts" {% if menu.prompt_mode == "tts" %}selected{% endif %} {% if tts_backend == "none" %}disabled{% endif %}>Texte TTS</option>
+      </select>
+    </label>
+    <label>Nouveau fichier audio
+      <input name="prompt_file" type="file" accept=".wav,.gsm,.sln,.ulaw,.alaw,audio/*">
+    </label>
+    <label>Texte TTS
+      <input name="prompt_text" value="{{ menu.prompt_text or '' }}" placeholder="Bonjour, tapez 1 pour...">
+    </label>
+    <label>Attente
+      <input name="timeout_seconds" type="number" min="3" max="30" value="{{ menu.timeout_seconds }}" required>
+    </label>
+    <label>Secours
+      <select name="fallback_type">
+        <option value="hangup" {% if menu.fallback_type == "hangup" %}selected{% endif %}>Raccrocher</option>
+        <option value="extension" {% if menu.fallback_type == "extension" %}selected{% endif %}>Extension</option>
+        <option value="ring_group" {% if menu.fallback_type == "ring_group" %}selected{% endif %}>Groupe d'appel</option>
+      </select>
+    </label>
+    <label>Cible secours
+      <select name="fallback_target">
+        <option value="">Aucune</option>
+        {% for extension in active_extensions %}
+          <option value="{{ extension.number }}" {% if menu.fallback_target == extension.number %}selected{% endif %}>Extension {{ extension.number }} - {{ extension.display_name }}</option>
+        {% endfor %}
+        {% for group in ring_groups %}
+          <option value="{{ group.number }}" {% if menu.fallback_target == group.number %}selected{% endif %}>Groupe {{ group.number }} - {{ group.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="check"><input name="enabled" type="checkbox" {% if menu.enabled %}checked{% endif %}> Actif</label>
+    <fieldset class="ivr-options">
+      <legend>Touche</legend>
+      {% for option in menu.options %}
+      <div class="ivr-option-row">
+        <input name="option_digits" value="{{ option.digit }}" pattern="[0-9]" aria-label="Touche {{ option.digit }}">
+        <select name="option_destination_types" aria-label="Destination touche {{ option.digit }}">
+          <option value="extension" {% if option.destination_type == "extension" %}selected{% endif %}>Extension</option>
+          <option value="ring_group" {% if option.destination_type == "ring_group" %}selected{% endif %}>Groupe d'appel</option>
+        </select>
+        <select name="option_destination_targets" aria-label="Cible touche {{ option.digit }}" required>
+          <option value="">Aucune cible</option>
+          {% for extension in active_extensions %}
+            <option value="{{ extension.number }}" {% if option.destination_target == extension.number %}selected{% endif %}>Extension {{ extension.number }} - {{ extension.display_name }}</option>
+          {% endfor %}
+          {% for group in ring_groups %}
+            <option value="{{ group.number }}" {% if option.destination_target == group.number %}selected{% endif %}>Groupe {{ group.number }} - {{ group.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% else %}
+      <div class="ivr-option-row">
+        <input name="option_digits" value="1" pattern="[0-9]" aria-label="Touche 1">
+        <select name="option_destination_types" aria-label="Destination touche 1">
+          <option value="extension">Extension</option>
+          <option value="ring_group">Groupe d'appel</option>
+        </select>
+        <select name="option_destination_targets" aria-label="Cible touche 1" required>
+          <option value="">Aucune cible</option>
+          {% for extension in active_extensions %}
+            <option value="{{ extension.number }}">Extension {{ extension.number }} - {{ extension.display_name }}</option>
+          {% endfor %}
+          {% for group in ring_groups %}
+            <option value="{{ group.number }}">Groupe {{ group.number }} - {{ group.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </fieldset>
+    <button type="submit">Enregistrer</button>
+  </form>
+</section>
+
+<section class="panel danger-zone">
+  <h2>Suppression</h2>
+  <p>La suppression retire ce standard des prochaines configurations generees.</p>
+  <form method="post" action="/ivr/{{ menu.id }}/delete">
+    <input name="next_url" type="hidden" value="/settings?tab=ivr">
+    <button type="submit" class="danger-button">Supprimer ce standard</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Modifier extension - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Extension {{ extension.number }}</h1>
+    <p>Parametres du poste et informations SIP a saisir dans le telephone.</p>
+  </div>
+  <a class="small-button" href="/extensions">Retour</a>
+</section>
+
+{% if error %}<p class="alert danger">{{ error }}</p>{% endif %}
+
+<section class="panel">
+  <h2>Configuration telephone</h2>
+  <dl class="details">
+    <div><dt>Serveur SIP</dt><dd>Adresse IP du serveur MiniPBX</dd></div>
+    <div><dt>Login SIP</dt><dd>{{ extension.sip_username }}</dd></div>
+    <div>
+      <dt>Mot de passe SIP</dt>
+      <dd>
+        <details>
+          <summary>Afficher le mot de passe</summary>
+          <code>{{ extension.sip_secret }}</code>
+        </details>
+      </dd>
+    </div>
+    <div><dt>Messagerie</dt><dd>*97</dd></div>
+  </dl>
+  <form method="post" action="/extensions/{{ extension.id }}/regenerate-secret">
+    <button type="submit" class="secondary">Regenerer et appliquer le mot de passe SIP</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Parametres</h2>
+  <form method="post" action="/extensions/{{ extension.id }}" enctype="multipart/form-data" class="form-grid compact">
+    <label>Numero
+      <input name="number" value="{{ extension.number }}" pattern="[0-9]{2,6}" required>
+    </label>
+    <label>Nom
+      <input name="display_name" value="{{ extension.display_name }}" required>
+    </label>
+    <label>Email
+      <input name="email" type="email" value="{{ extension.email or '' }}">
+    </label>
+    <label>PIN messagerie
+      <input name="voicemail_pin" value="{{ extension.voicemail_pin }}" pattern="[0-9]{4,8}" required>
+    </label>
+    <label class="check"><input name="voicemail_enabled" type="checkbox" {% if extension.voicemail_enabled %}checked{% endif %}> Messagerie</label>
+    <label class="check"><input name="outbound_enabled" type="checkbox" {% if extension.outbound_enabled %}checked{% endif %}> Sortant</label>
+    <label class="check"><input name="inbound_enabled" type="checkbox" {% if extension.inbound_enabled %}checked{% endif %}> Entrant</label>
+    <label class="check"><input name="enabled" type="checkbox" {% if extension.enabled %}checked{% endif %}> Actif</label>
+    <fieldset class="ivr-options">
+      <legend>Message de messagerie</legend>
+      <label>Type
+        <select name="voicemail_greeting_mode">
+          <option value="default" {% if extension.voicemail_greeting_mode == "default" %}selected{% endif %}>Message Asterisk par defaut</option>
+          <option value="recording" {% if extension.voicemail_greeting_mode == "recording" %}selected{% endif %}>Enregistrement</option>
+          <option value="tts" {% if extension.voicemail_greeting_mode == "tts" %}selected{% endif %} {% if tts_backend == "none" %}disabled{% endif %}>Texte TTS</option>
+        </select>
+      </label>
+      <label>Nouveau fichier audio
+        <input name="voicemail_greeting_file" type="file" accept=".wav,.gsm,.sln,.ulaw,.alaw,audio/*">
+      </label>
+      <label>Texte TTS
+        <input name="voicemail_greeting_text" value="{{ extension.voicemail_greeting_text or '' }}" placeholder="Nous ne sommes pas disponibles...">
+      </label>
+    </fieldset>
+    <button type="submit">Enregistrer</button>
+  </form>
+</section>
+
+<section class="panel danger-zone">
+  <h2>Suppression</h2>
+  <p>La suppression retire le poste des prochaines configurations generees.</p>
+  <form method="post" action="/extensions/{{ extension.id }}/delete">
+    <button type="submit" class="danger-button">Supprimer cette extension</button>
+  </form>
+</section>
+{% endblock %}

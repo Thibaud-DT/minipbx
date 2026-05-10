@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}MiniPBX{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/app.css') }}">
+    <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/dashboard">MiniPBX</a>
+      {% if request.session.get("admin_user_id") %}
+      <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/settings">Configuration</a>
+        <a href="/health">Sante</a>
+        <a href="/monitoring">Supervision</a>
+        <a href="/calls">Appels</a>
+        <a href="/voicemail">Messagerie</a>
+        <a href="/diagnostics">Diagnostics</a>
+        <a href="/backups">Sauvegardes</a>
+      </nav>
+      {% if config_state %}
+      {% set current_url = request.url.path %}
+      {% if request.url.query %}{% set current_url = current_url ~ '?' ~ request.url.query %}{% endif %}
+      <div class="config-menu-state">
+        <span class="badge {{ 'warn' if config_state.pending else 'ok' }}">{{ config_state.label }}</span>
+        {% if config_state.pending %}
+        <form method="post" action="/config/apply-current">
+          <input name="next_url" type="hidden" value="{{ current_url }}">
+          <button type="submit" class="small-button">Appliquer</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endif %}
+      <form method="post" action="/logout">
+        <button type="submit" class="link-button">Deconnexion</button>
+      </form>
+      {% endif %}
+    </header>
+    <main class="page">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

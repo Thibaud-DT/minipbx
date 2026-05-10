@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Groupes d'appel - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Groupes d'appel</h1>
+    <p>Faire sonner plusieurs extensions en simultane avec une destination de secours.</p>
+  </div>
+</section>
+
+{% if error %}<p class="alert danger">{{ error }}</p>{% endif %}
+
+<section class="panel">
+  <h2>Nouveau groupe</h2>
+  <form method="post" action="/ring-groups" class="form-grid ring-group-grid">
+    <label>Nom
+      <input name="name" placeholder="Accueil" required>
+    </label>
+    <label>Numero
+      <input name="number" placeholder="600" pattern="[0-9]{2,6}" required>
+    </label>
+    <label>Timeout
+      <input name="timeout_seconds" type="number" min="5" max="120" value="20" required>
+    </label>
+    <label>Secours
+      <select name="fallback_type">
+        <option value="hangup">Raccrocher</option>
+        <option value="extension">Extension</option>
+        <option value="voicemail">Messagerie</option>
+      </select>
+    </label>
+    <label>Cible secours
+      <select name="fallback_target">
+        <option value="">Aucune</option>
+        {% for extension in extensions %}
+          <option value="{{ extension.number }}">{{ extension.number }} - {{ extension.display_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <fieldset class="member-list">
+      <legend>Membres</legend>
+      {% for extension in extensions %}
+        <label class="check"><input name="member_ids" type="checkbox" value="{{ extension.id }}"> {{ extension.number }} - {{ extension.display_name }}</label>
+      {% else %}
+        <p>Aucune extension active.</p>
+      {% endfor %}
+    </fieldset>
+    <button type="submit">Ajouter</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Groupes existants</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Numero</th>
+        <th>Nom</th>
+        <th>Membres</th>
+        <th>Timeout</th>
+        <th>Secours</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in ring_groups %}
+      <tr>
+        <td>{{ group.number }}</td>
+        <td>{{ group.name }}</td>
+        <td>
+          {% for member in group.members %}
+            {{ member.extension.number }}{% if not loop.last %}, {% endif %}
+          {% else %}
+            Aucun
+          {% endfor %}
+        </td>
+        <td>{{ group.timeout_seconds }}s</td>
+        <td>{{ group.fallback_type }} {{ group.fallback_target or "" }}</td>
+        <td>
+          <form method="post" action="/ring-groups/{{ group.id }}/delete">
+            <button type="submit" class="small-button">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Aucun groupe d'appel.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

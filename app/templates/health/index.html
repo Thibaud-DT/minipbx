@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Sante Asterisk - MiniPBX{% endblock %}
+{% block content %}
+<section class="heading">
+  <div>
+    <h1>Sante Asterisk</h1>
+    <p>Synthese d'exploitation du serveur PBX et controle de la configuration avant application.</p>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="/diagnostics">Diagnostics detailles</a>
+  </div>
+</section>
+
+<section class="grid diagnostics-grid">
+  <article class="card">
+    <span class="status {{ 'ok' if health.asterisk_running else 'warn' }}"></span>
+    <h2>Asterisk</h2>
+    <p>{{ health.asterisk_message }}</p>
+  </article>
+  <article class="card">
+    <span class="status {{ 'ok' if health.endpoints_ok else 'warn' }}"></span>
+    <h2>PJSIP</h2>
+    <p>{{ "Repond" if health.endpoints_ok else "A verifier" }}</p>
+  </article>
+  <article class="card">
+    <span class="metric">{{ health.contacts_count }}</span>
+    <h2>Extensions enregistrees</h2>
+  </article>
+  <article class="card">
+    <span class="metric">{{ health.active_calls_count }}</span>
+    <h2>Appels actifs</h2>
+  </article>
+</section>
+
+<section class="grid diagnostics-grid">
+  <article class="card">
+    <span class="status {{ 'ok' if health.trunk_registered else 'warn' }}"></span>
+    <h2>Trunk SIP</h2>
+    <p>{{ "Enregistre" if health.trunk_registered else "Non enregistre ou non configure" }}</p>
+  </article>
+  <article class="card">
+    <h2>Version</h2>
+    <p>{{ health.version }}</p>
+  </article>
+  <article class="card">
+    <h2>Uptime</h2>
+    <p>{{ health.uptime }}</p>
+  </article>
+  <article class="card">
+    <span class="status {{ 'ok' if config_test.ok else 'warn' }}"></span>
+    <h2>Test config</h2>
+    <p>{{ "Pret a appliquer" if config_test.ok else "Corrections requises" }}</p>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-title-row">
+    <h2>Test de configuration avant application</h2>
+    <a class="small-button" href="/config/preview">Voir les fichiers</a>
+  </div>
+  {% if config_test.checks %}
+    <ul class="issue-list">
+      {% for issue in config_test.checks %}
+        <li class="{{ 'danger-text' if issue.level == 'error' else 'warn-text' }}">
+          {{ "Erreur" if issue.level == "error" else "Avertissement" }} : {{ issue.message }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="alert success">Aucune erreur detectee dans la configuration generee.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Etat logs</h2>
+  <pre class="config-preview diagnostics-output">{{ health.recent_errors }}</pre>
+</section>
+{% endblock %}
