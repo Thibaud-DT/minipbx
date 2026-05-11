@@ -208,7 +208,6 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 run_as_runtime_user python -m app.startup_config
-export MINIPBX_DATABASE_INITIALIZED=true
 
 run_as_runtime_user asterisk -C /etc/asterisk/asterisk.conf -f &
 ASTERISK_PID="$!"

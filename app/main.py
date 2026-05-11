@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -20,8 +19,7 @@ def create_app() -> FastAPI:
     settings.generated_config_dir.mkdir(parents=True, exist_ok=True)
     settings.prompt_dir.mkdir(parents=True, exist_ok=True)
     settings.backup_dir.mkdir(parents=True, exist_ok=True)
-    if os.getenv("MINIPBX_DATABASE_INITIALIZED") != "true":
-        init_db()
+    init_db()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

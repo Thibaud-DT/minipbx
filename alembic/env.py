@@ -55,13 +55,31 @@ def _stamp_legacy_schema(connection) -> None:
 
 def _detect_schema_revision(inspector, table_names: set[str]) -> str:
     """Best-effort stamp for databases created before Alembic was introduced."""
-    if "sip_trunks" in table_names:
+    if "pbx_settings" in table_names and "sip_trunks" in table_names:
         sip_trunk_columns = {column["name"] for column in inspector.get_columns("sip_trunks")}
         if "inbound_match" in sip_trunk_columns:
             return "0010_trunk_inbound_match"
     if "contacts" not in table_names and "pbx_settings" in table_names:
         return "0009_remove_contacts"
-    return "0008_pbx_settings"
+    if "pbx_settings" in table_names:
+        return "0008_pbx_settings"
+    if "contacts" in table_names:
+        return "0007_contacts"
+    if "extensions" in table_names:
+        extension_columns = {column["name"] for column in inspector.get_columns("extensions")}
+        if "voicemail_greeting_mode" in extension_columns:
+            return "0006_voicemail_greetings"
+    if "inbound_routes" in table_names:
+        inbound_route_columns = {column["name"] for column in inspector.get_columns("inbound_routes")}
+        if "business_days" in inbound_route_columns:
+            return "0005_business_hours"
+    if "ivr_menus" in table_names:
+        return "0004_ivr_menus"
+    if "outbound_rules" in table_names:
+        return "0003_outbound_rules"
+    if "ring_groups" in table_names:
+        return "0002_ring_groups_inbound_routes"
+    return "0001_initial"
 
 
 if context.is_offline_mode():
