@@ -18,9 +18,9 @@ def create_admin(db: Session, username: str, password: str, *, commit: bool = Tr
     db.add(admin)
     if commit:
         db.commit()
+        db.refresh(admin)
     else:
         db.flush()
-    db.refresh(admin)
     return admin
 
 

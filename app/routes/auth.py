@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -13,6 +15,7 @@ from app.services.pbx_settings import save_pbx_settings
 from app.templating import templates
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 SETUP_WARNING_SESSION_KEY = "setup_warning"
 
 
@@ -126,11 +129,12 @@ def setup_submit(
         db.commit()
     except Exception:
         db.rollback()
+        logger.exception("Initial setup database transaction failed")
         return templates.TemplateResponse(
             "setup/index.html",
             {
                 "request": request,
-                "error": "Initialisation impossible. Verifie les valeurs saisies et les migrations de la base.",
+                "error": "Initialisation impossible. Consulte les logs du conteneur pour le detail technique.",
                 "form": form,
             },
             status_code=500,
