@@ -43,14 +43,25 @@ def _stamp_legacy_schema(connection) -> None:
         return
     if "alembic_version" not in table_names:
         connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
-        connection.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0008_pbx_settings')"))
+        connection.execute(text("INSERT INTO alembic_version (version_num) VALUES (:version)"), {"version": _detect_schema_revision(inspector, table_names)})
         connection.commit()
         return
     current = connection.execute(text("SELECT version_num FROM alembic_version LIMIT 1")).scalar()
     if current:
         return
-    connection.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0008_pbx_settings')"))
+    connection.execute(text("INSERT INTO alembic_version (version_num) VALUES (:version)"), {"version": _detect_schema_revision(inspector, table_names)})
     connection.commit()
+
+
+def _detect_schema_revision(inspector, table_names: set[str]) -> str:
+    """Best-effort stamp for databases created before Alembic was introduced."""
+    if "sip_trunks" in table_names:
+        sip_trunk_columns = {column["name"] for column in inspector.get_columns("sip_trunks")}
+        if "inbound_match" in sip_trunk_columns:
+            return "0010_trunk_inbound_match"
+    if "contacts" not in table_names and "pbx_settings" in table_names:
+        return "0009_remove_contacts"
+    return "0008_pbx_settings"
 
 
 if context.is_offline_mode():
