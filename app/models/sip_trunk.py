@@ -17,6 +17,7 @@ class SipTrunk(Base):
     password_secret: Mapped[str] = mapped_column(String(255))
     from_user: Mapped[str | None] = mapped_column(String(120), nullable=True)
     from_domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    inbound_match: Mapped[str | None] = mapped_column(String(500), nullable=True)
     transport: Mapped[str] = mapped_column(String(20), default="udp")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

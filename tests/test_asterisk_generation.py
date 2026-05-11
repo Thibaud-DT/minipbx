@@ -307,6 +307,42 @@ def test_render_outbound_rules_with_prefix_and_international_block(tmp_path: Pat
     assert "Dial(PJSIP/${EXTEN:1}@trunk-main,60)" in dialplan
 
 
+def test_render_trunk_identify_uses_inbound_match_or_host(tmp_path: Path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+    session.add(
+        SipTrunk(
+            name="FreePro",
+            host="sip.freepro.com",
+            username="account",
+            password_secret="secret",
+            from_user="0659161356",
+            from_domain="sip.freepro.com",
+            inbound_match="85.31.193.213\n85.31.193.214",
+            transport="udp",
+            enabled=True,
+        )
+    )
+    session.commit()
+    settings = Settings(
+        secret_key="test",
+        data_dir=tmp_path,
+        generated_config_dir=tmp_path / "generated",
+        backup_dir=tmp_path / "backups",
+        asterisk_config_dir=tmp_path / "asterisk",
+        asterisk_apply_enabled=False,
+    )
+
+    pjsip = render_configs(session, settings)["pjsip_minipbx.conf"]
+
+    assert "[trunk-main-identify]" in pjsip
+    assert "type=identify" in pjsip
+    assert "endpoint=trunk-main" in pjsip
+    assert "match=85.31.193.213" in pjsip
+    assert "match=85.31.193.214" in pjsip
+
+
 def test_render_ivr_menu_and_inbound_route(tmp_path: Path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)

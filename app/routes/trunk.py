@@ -38,6 +38,7 @@ def save_trunk(
     password: str = Form(""),
     from_user: str = Form(""),
     from_domain: str = Form(""),
+    inbound_match: str = Form(""),
     transport: str = Form("udp"),
     enabled: bool = Form(False),
     next_url: str = Form(""),
@@ -47,7 +48,7 @@ def save_trunk(
     if guarded:
         return guarded
     trunk = db.scalar(select(SipTrunk).order_by(SipTrunk.id).limit(1))
-    error = _validate_trunk(host, username, password, transport, trunk_exists=trunk is not None)
+    error = _validate_trunk(host, username, password, inbound_match, transport, trunk_exists=trunk is not None)
     if error:
         return templates.TemplateResponse(
             "trunk/form.html",
@@ -63,6 +64,7 @@ def save_trunk(
             password_secret=password,
             from_user=from_user.strip() or None,
             from_domain=from_domain.strip() or None,
+            inbound_match=_normalize_inbound_match(inbound_match) or None,
             transport=transport,
             enabled=enabled,
         )
@@ -74,6 +76,7 @@ def save_trunk(
             trunk.password_secret = password
         trunk.from_user = from_user.strip() or None
         trunk.from_domain = from_domain.strip() or None
+        trunk.inbound_match = _normalize_inbound_match(inbound_match) or None
         trunk.transport = transport
         trunk.enabled = enabled
     db.add(trunk)
@@ -81,7 +84,14 @@ def save_trunk(
     return RedirectResponse(_safe_next(next_url, "/trunk"), status_code=303)
 
 
-def _validate_trunk(host: str, username: str, password: str, transport: str, trunk_exists: bool) -> str | None:
+def _validate_trunk(
+    host: str,
+    username: str,
+    password: str,
+    inbound_match: str,
+    transport: str,
+    trunk_exists: bool,
+) -> str | None:
     if not host.strip():
         return "Le domaine ou l'adresse IP operateur est obligatoire."
     if not username.strip():
@@ -90,7 +100,18 @@ def _validate_trunk(host: str, username: str, password: str, transport: str, tru
         return "Transport SIP invalide."
     if not trunk_exists and not password:
         return "Le mot de passe SIP est obligatoire a la creation."
+    if any(char in inbound_match for char in [";", "#", "[", "]"]):
+        return "Les correspondances entrantes ne doivent contenir que des IP, CIDR ou domaines."
     return None
+
+
+def _normalize_inbound_match(inbound_match: str) -> str:
+    matches = []
+    for raw_match in inbound_match.replace(",", "\n").splitlines():
+        match = raw_match.strip()
+        if match and match not in matches:
+            matches.append(match)
+    return "\n".join(matches)
 
 
 def _safe_next(next_url: str, fallback: str) -> str:

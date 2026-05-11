@@ -13,6 +13,7 @@ def test_save_trunk_masks_password_and_preview_config():
             "password": "super-secret",
             "from_user": "0123456789",
             "from_domain": "sip.example.test",
+            "inbound_match": "85.31.193.213\n85.31.193.214",
             "transport": "udp",
             "enabled": "on",
         },
@@ -30,3 +31,6 @@ def test_save_trunk_masks_password_and_preview_config():
     assert preview.status_code == 200
     assert "trunk-main" in preview.text
     assert "sip.example.test" in preview.text
+    assert "trunk-main-identify" in preview.text
+    assert "match=85.31.193.213" in preview.text
+    assert "match=85.31.193.214" in preview.text

@@ -4,6 +4,18 @@ Toutes les modifications notables de MiniPBX sont suivies ici.
 
 Le projet suit un versionnement semantique simple : `MAJEUR.MINEUR.CORRECTIF`.
 
+## [0.1.1] - 2026-05-11
+
+### Ajoute
+
+- Champ trunk `IP/domaines entrants operateur` pour identifier les INVITE entrants par IP, domaine ou CIDR.
+- Generation PJSIP `[trunk-main-identify]` avec `type=identify` pour rattacher les appels entrants operateur au trunk.
+- Documentation de diagnostic pour les erreurs `No matching endpoint found` et `Failed to authenticate` sur INVITE entrant.
+
+### Corrige
+
+- Les appels entrants de trunks comme FreePro pouvaient etre rejetes si l'IP source operateur ne correspondait pas a un endpoint PJSIP connu.
+
 ## [0.1.0] - 2026-05-10
 
 Premiere version de deploiement interne.

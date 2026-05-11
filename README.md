@@ -2,7 +2,7 @@
 
 MiniPBX est une interface web legere pour administrer un petit PBX Asterisk destine aux TPE. L'objectif prioritaire est une installation simple, avec Asterisk, l'application FastAPI et SQLite dans un conteneur Docker appliance.
 
-Version courante : `0.1.0`
+Version courante : `0.1.1`
 
 Documentation :
 
@@ -87,6 +87,31 @@ docker compose --profile bridge logs -f minipbx-bridge
 ```
 
 Pendant un appel, les logs doivent montrer des paquets RTP entrants et sortants. Des paquets dans un seul sens indiquent un probleme d'adresse annoncee, de pare-feu ou de ports UDP.
+
+### INVITE entrant trunk : No matching endpoint / Failed to authenticate
+
+Si un operateur envoie un appel entrant et qu'Asterisk loggue :
+
+```text
+Request 'INVITE' ... - No matching endpoint found
+Request 'INVITE' ... - Failed to authenticate
+```
+
+cela signifie que l'IP source de l'operateur n'est pas reconnue comme le trunk SIP.
+
+Dans `Configuration > Trunk SIP`, renseigner `IP/domaines entrants operateur` avec l'IP vue dans les logs. Exemple FreePro :
+
+```text
+85.31.193.213
+```
+
+Puis :
+
+```text
+Configuration -> Generer une revision -> Appliquer / reload
+```
+
+La configuration generee ajoute une section PJSIP `type=identify` pour rattacher les INVITE entrants au trunk.
 
 ## Donnees persistantes
 

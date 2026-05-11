@@ -74,6 +74,7 @@ def render_configs(db: Session, settings: Settings) -> dict[str, str]:
         "outbound_rule": outbound_rule,
         "emergency_numbers": emergency_numbers,
         "trunk": trunk,
+        "trunk_inbound_matches": _trunk_inbound_matches(trunk),
         "sip_port": pbx_settings.sip_port,
         "rtp_start": pbx_settings.rtp_start,
         "rtp_end": pbx_settings.rtp_end,
@@ -87,6 +88,18 @@ def render_configs(db: Session, settings: Settings) -> dict[str, str]:
         "tts_backend": settings.tts_backend,
     }
     return {filename: env.get_template(template).render(**context) for filename, template in GENERATED_FILES.items()}
+
+
+def _trunk_inbound_matches(trunk: SipTrunk | None) -> list[str]:
+    if not trunk:
+        return []
+    raw_matches = trunk.inbound_match or trunk.host
+    matches = []
+    for raw_match in raw_matches.replace(",", "\n").splitlines():
+        match = raw_match.strip()
+        if match and match not in matches:
+            matches.append(match)
+    return matches
 
 
 def generate_config(db: Session, settings: Settings) -> ConfigRevision:

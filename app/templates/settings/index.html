@@ -480,6 +480,10 @@
     <label>From domain
       <input name="from_domain" value="{{ trunk.from_domain if trunk and trunk.from_domain else '' }}">
     </label>
+    <label>IP/domaines entrants operateur
+      <textarea name="inbound_match" rows="3" placeholder="Ex. 85.31.193.213&#10;ou sip.freepro.com">{{ trunk.inbound_match if trunk and trunk.inbound_match else '' }}</textarea>
+      <small>Utilise pour reconnaitre les INVITE entrants du trunk. Si vide, MiniPBX utilise le domaine operateur.</small>
+    </label>
     <label>Transport
       <select name="transport">
         {% set current_transport = trunk.transport if trunk else 'udp' %}

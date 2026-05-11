@@ -62,6 +62,13 @@ password={{ trunk.password_secret }}
 type=aor
 contact=sip:{{ trunk.host }}
 
+[trunk-main-identify]
+type=identify
+endpoint=trunk-main
+{% for match in trunk_inbound_matches %}
+match={{ match }}
+{% endfor %}
+
 {% if trunk.host not in ["127.0.0", "127.0.0.1", "localhost"] %}
 [trunk-main-registration]
 type=registration
