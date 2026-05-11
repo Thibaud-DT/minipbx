@@ -12,6 +12,7 @@ from app.services.cdr import read_call_records
 from app.services.config_test import run_generated_config_test
 from app.services.config_validation import has_blocking_issues, validate_config
 from app.templating import templates
+from app.routes.auth import SETUP_WARNING_SESSION_KEY
 
 router = APIRouter()
 
@@ -50,6 +51,9 @@ def dashboard(
     recent_calls = read_call_records(settings.cdr_csv_path, extension_numbers, limit=5)
     config_issues = validate_config(db, settings)
     alerts = []
+    setup_warning = request.session.pop(SETUP_WARNING_SESSION_KEY, None)
+    if setup_warning:
+        alerts.append(setup_warning)
     if extension_count == 0:
         alerts.append("Aucune extension configuree.")
     if not trunk:

@@ -13,6 +13,7 @@ from app.services.pbx_settings import save_pbx_settings
 from app.templating import templates
 
 router = APIRouter()
+SETUP_WARNING_SESSION_KEY = "setup_warning"
 
 
 @router.get("/setup", response_class=HTMLResponse)
@@ -125,14 +126,27 @@ def setup_submit(
         db.commit()
     except Exception:
         db.rollback()
-        raise
+        return templates.TemplateResponse(
+            "setup/index.html",
+            {
+                "request": request,
+                "error": "Initialisation impossible. Verifie les valeurs saisies et les migrations de la base.",
+                "form": form,
+            },
+            status_code=500,
+        )
+
+    initial_config_applied = True
     if first_extension:
         db.refresh(first_extension)
-        if run_generated_config_test(db, settings).ok:
-            revision = generate_config(db, settings)
-            apply_revision(db, revision, settings)
+        initial_config_applied = _apply_initial_config(db, settings)
+        if not initial_config_applied:
+            request.session[SETUP_WARNING_SESSION_KEY] = (
+                "Le setup est enregistre, mais la configuration Asterisk initiale n'a pas pu etre appliquee. "
+                "Va dans Configuration pour previsualiser, corriger si besoin, puis appliquer."
+            )
     login(request, admin)
-    if first_extension:
+    if first_extension and initial_config_applied:
         return RedirectResponse(f"/extensions/{first_extension.id}/edit", status_code=303)
     return RedirectResponse("/dashboard", status_code=303)
 
@@ -197,3 +211,15 @@ def _validate_setup(
     if any(trunk_fields) and not all(trunk_fields):
         return "Pour configurer un trunk au demarrage, host, identifiant et mot de passe sont obligatoires."
     return None
+
+
+def _apply_initial_config(db: Session, settings: Settings) -> bool:
+    try:
+        test_result = run_generated_config_test(db, settings)
+        if not test_result.ok:
+            return False
+        revision = generate_config(db, settings)
+        applied = apply_revision(db, revision, settings)
+        return applied.status == "applied"
+    except Exception:  # noqa: BLE001 - setup must not fail after data has been committed.
+        return False

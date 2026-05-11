@@ -91,6 +91,33 @@ def test_setup_generated_sip_secret_is_alphanumeric():
         assert extension.sip_secret.isalnum()
 
 
+def test_setup_keeps_created_data_when_initial_apply_fails():
+    client = TestClient(app)
+
+    with patch("app.routes.auth.apply_revision", side_effect=RuntimeError("reload failed")):
+        response = client.post(
+            "/setup",
+            data={
+                "username": "admin",
+                "password": "long-password",
+                "password_confirm": "long-password",
+                "first_extension_number": "100",
+                "first_extension_name": "Accueil",
+            },
+            follow_redirects=False,
+        )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/dashboard"
+    with SessionLocal() as db:
+        assert db.query(AdminUser).count() == 1
+        assert db.query(Extension).filter_by(number="100").count() == 1
+
+    dashboard = client.get("/dashboard")
+    assert dashboard.status_code == 200
+    assert "configuration Asterisk initiale" in dashboard.text
+
+
 def test_setup_rolls_back_admin_when_initial_save_fails():
     client = TestClient(app, raise_server_exceptions=False)
 

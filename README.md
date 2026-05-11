@@ -1,6 +1,10 @@
 # MiniPBX
 
-MiniPBX est une interface web legere pour administrer un petit PBX Asterisk destine aux TPE. L'objectif prioritaire est une installation simple, avec Asterisk, l'application FastAPI et SQLite dans un conteneur Docker appliance.
+MiniPBX est une interface web legere pour administrer un serveur SIP/PABX Asterisk destine aux petites structures : independants, commerces, cabinets, associations et TPE de moins de 10 personnes.
+
+L'objectif est volontairement different d'une solution complete comme FreePBX ou FusionPBX. MiniPBX ne cherche pas a couvrir tous les cas possibles d'un operateur telecom ou d'un centre d'appels. Le projet vise un besoin plus simple : installer rapidement un petit standard telephonique, creer quelques extensions SIP, connecter un trunk operateur, router les appels entrants et garder la configuration Asterisk lisible, sauvegardee et reproductible.
+
+Le parti pris principal est la simplicite d'installation. MiniPBX embarque Asterisk, l'application FastAPI et SQLite dans une image Docker appliance, avec des volumes persistants et sans modification manuelle obligatoire des fichiers Asterisk.
 
 Version courante : `0.1.1`
 
@@ -25,6 +29,113 @@ http://IP_DU_SERVEUR:8080
 ```
 
 Au premier lancement, MiniPBX affiche l'assistant de creation du premier administrateur.
+
+## Fonctionnalites
+
+### Installation et exploitation
+
+- Image Docker appliance avec Asterisk et MiniPBX dans le meme conteneur
+- Docker Compose pret pour la production Linux en mode reseau `host`
+- Profil `bridge` optionnel pour le developpement et les tests locaux
+- Volumes persistants pour la base SQLite, les configurations Asterisk, les sauvegardes, les messages vocaux et les logs
+- Script `install.sh` pour initialiser simplement un fichier `.env`
+- Healthcheck HTTP Docker sur `/health`
+- Execution runtime non-root apres preparation des volumes par l'entrypoint
+- Publication possible sur Docker Hub avec `docker/publish.sh`
+
+### Premier demarrage
+
+- Assistant initial guide
+- Creation du premier administrateur
+- Configuration reseau PBX
+- Creation d'une premiere extension SIP
+- Configuration optionnelle du trunk SIP principal
+- Assistant transactionnel pour eviter un administrateur cree sans configuration PBX valide
+
+### Administration web
+
+- Interface web FastAPI, Jinja2 et HTMX
+- Authentification administrateur par session
+- Protection CSRF sur les actions admin
+- Dashboard protege
+- Page de configuration unifiee avec onglets
+- Etat global de configuration dans le menu : configuration a jour ou modifications a appliquer
+- Generation, previsualisation et application controlee des fichiers Asterisk
+
+### Extensions SIP
+
+- Creation, modification et suppression des extensions
+- Regeneration du mot de passe SIP
+- Affichage des informations de configuration softphone
+- Message de messagerie personnalise par extension, via fichier audio ou texte TTS
+- Consultation, telechargement et suppression des messages vocaux
+
+### Trunk SIP et routage
+
+- Configuration du trunk SIP principal
+- Masquage du secret trunk dans l'interface apres sauvegarde
+- Identification des INVITE entrants par IP ou domaine operateur
+- Routes entrantes multiples par numero appele
+- Routage entrant vers extension, groupe d'appel, standard vocal ou messagerie
+- Regles d'appels sortants avec prefixe optionnel
+- Blocage international par defaut
+
+### Standard telephonique
+
+- Standards vocaux configurables
+- Message d'accueil par fichier audio ou texte TTS
+- Touches DTMF vers une extension ou un groupe
+- Edition des standards existants depuis une page dediee
+
+### Groupes et horaires
+
+- Groupes d'appel avec sonnerie simultanee
+- Horaires d'ouverture pour le routage entrant
+- Fermetures exceptionnelles par date
+
+### Supervision et diagnostics
+
+- Page Sante Asterisk avec synthese serveur, trunk, extensions et appels actifs
+- Supervision temps reel WebSocket des extensions et appels actifs
+- Supervision du trunk SIP avec etat d'enregistrement PJSIP
+- Diagnostics PJSIP/RTP depuis l'interface
+- Journal d'appels depuis les CDR Asterisk
+- Filtres par date, extension et direction d'appel
+- Export CSV du journal d'appels
+
+### Configuration Asterisk
+
+- Generation dediee des fichiers `pjsip_minipbx.conf`, `extensions_minipbx.conf`, `voicemail_minipbx.conf` et `rtp.conf`
+- Validation de coherence avant generation/application
+- Test statique de la configuration generee avant application
+- Historique des revisions de configuration avec application ciblee
+- Application en un clic de la configuration courante
+- Reload Asterisk via commande configurable
+- Sauvegarde automatique des anciennes configurations avant application
+- Rollback des fichiers Asterisk si le reload echoue
+- Application automatique de la configuration courante au demarrage lorsque c'est necessaire
+
+### Sauvegardes
+
+- Page sauvegardes avec telechargement ZIP des revisions et backups Asterisk
+- Restauration guidee d'une sauvegarde Asterisk avec confirmation
+- Sauvegarde applicative complete avec SQLite, revisions et fichiers Asterisk
+- Inspection d'une sauvegarde complete avant import
+- Import controle avec base SQLite en staging
+- Activation confirmee d'une base SQLite importee avec sauvegarde de l'ancienne base
+- Alerte persistante de redemarrage requis apres activation d'une base importee
+- Rejet des archives ZIP dangereuses ou trop volumineuses
+
+### Qualite et fiabilite
+
+- Migrations Alembic appliquees au demarrage
+- Bootstrap Alembic pour les volumes existants sans historique de migration
+- Hachage des mots de passe admin via PBKDF2 standard library
+- Compatibilite avec les anciens hashes admin
+- Timestamps applicatifs generes en UTC timezone-aware
+- Normalisation WAV interne sans dependance `audioop`
+- Tests pytest sur les services critiques, la generation Asterisk, les routes et les restaurations
+- Smoke test Docker pour verifier le demarrage court, l'utilisateur effectif des processus et la CLI Asterisk
 
 ## Mode reseau
 
@@ -185,75 +296,6 @@ Publication Docker Hub :
 docker login
 docker/publish.sh <namespace-dockerhub>/minipbx
 ```
-
-## Etat initial implemente
-
-- Page d'accueil
-- Assistant de premier demarrage avec administrateur, reseau PBX, premiere extension et trunk optionnel
-- Creation du premier administrateur
-- Session admin
-- Dashboard protege
-- Creation, modification, suppression des extensions
-- Regeneration du mot de passe SIP d'une extension
-- Affichage des informations de configuration telephone
-- Page de configuration unifiee avec onglets
-- Reglages PBX modifiables apres le premier demarrage
-- Validation de configuration affichee par section
-- Groupes d'appel avec sonnerie simultanee
-- Standard vocal avec touches DTMF vers extensions ou groupes
-- Message de standard par fichier audio ou texte TTS
-- Routes entrantes multiples par numero appele
-- Routage entrant vers extension, groupe d'appel, standard ou messagerie
-- Horaires d'ouverture pour le routage entrant
-- Fermetures exceptionnelles par date
-- Consultation, telechargement et suppression des messages vocaux
-- Message de messagerie personnalise par extension, via fichier audio ou TTS
-- Regles d'appels sortants avec prefixe optionnel
-- Blocage international par defaut
-- Journal d'appels depuis les CDR Asterisk
-- Filtres par date, extension et direction d'appel
-- Export CSV du journal d'appels
-- Diagnostics PJSIP/RTP depuis l'interface
-- Page Sante Asterisk avec synthese serveur, trunk, extensions et appels actifs
-- Test statique de la configuration generee avant application
-- Supervision temps reel WebSocket des extensions et appels actifs
-- Supervision du trunk SIP avec etat d'enregistrement PJSIP
-- Configuration AMI locale preparee pour les evenements Asterisk
-- Client AMI en tache de fond pour reveiller la supervision WebSocket sur evenement
-- Page sauvegardes avec telechargement ZIP des revisions et backups Asterisk
-- Restauration guidee d'une sauvegarde Asterisk avec confirmation
-- Sauvegarde applicative complete avec SQLite, revisions et fichiers Asterisk
-- Inspection d'une sauvegarde complete avant import
-- Application controlee d'une sauvegarde complete avec base SQLite en staging
-- Activation confirmee d'une base SQLite importee avec sauvegarde de l'ancienne base
-- Alerte persistante de redemarrage requis apres activation d'une base SQLite importee
-- Rejet des sauvegardes ZIP completes avec chemin dangereux ou contenu decompresse trop volumineux
-- Configuration du trunk SIP principal
-- Masquage du secret trunk dans l'interface apres sauvegarde
-- Previsualisation des fichiers Asterisk generes
-- Validation de coherence avant generation/application de la configuration
-- Historique des revisions de configuration avec application ciblee
-- Etat global de configuration dans le menu
-- Application en un clic de la configuration courante
-- Generation minimale `PJSIP`, dialplan, voicemail et RTP
-- Application/reload Asterisk via commande configurable
-- Sauvegarde des anciennes configurations avant application
-- Dockerfile, Compose, `.env.example` et `install.sh`
-- Protection CSRF des actions admin
-- Healthcheck Docker
-- Migrations Alembic au demarrage
-- Bootstrap Alembic pour les volumes existants sans historique de migration
-- Rollback des fichiers Asterisk si reload echoue
-- Tests de rollback sur application de revision et restauration Asterisk
-- Assistant initial transactionnel pour eviter un administrateur sans configuration PBX
-- Retrait du module carnet d'adresse pour recentrer MiniPBX sur la gestion serveur
-- Timestamps applicatifs generes en UTC timezone-aware
-- Normalisation WAV interne sans dependance `audioop`
-- Rendu templates compatible avec la signature Starlette recente
-- Hachage des mots de passe admin via PBKDF2 standard library, sans dependance `passlib`, avec compatibilite des anciens hashes
-- Execution d'Asterisk et Uvicorn avec l'utilisateur non-root `asterisk` apres preparation des volumes par l'entrypoint
-- Fichiers optionnels Asterisk initialises par l'entrypoint pour eviter les avertissements de demarrage parasites
-- Smoke test Docker pour verifier demarrage court, utilisateur effectif des processus et CLI Asterisk
 
 ## Prochaines etapes techniques
 
