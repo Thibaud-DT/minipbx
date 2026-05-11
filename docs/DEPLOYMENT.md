@@ -30,6 +30,23 @@ http://IP_DU_SERVEUR:8080
 
 L'assistant de premier demarrage permet de creer l'administrateur, regler le reseau PBX et creer une premiere extension.
 
+## Installation depuis Docker Hub
+
+Quand l'image est publiee sur Docker Hub :
+
+```bash
+cp .env.example .env
+./install.sh
+MINIPBX_IMAGE=<namespace-dockerhub>/minipbx:0.1.1 docker compose -f docker-compose.hub.yml up -d
+```
+
+Pour mettre a jour depuis Docker Hub :
+
+```bash
+MINIPBX_IMAGE=<namespace-dockerhub>/minipbx:0.1.1 docker compose -f docker-compose.hub.yml pull
+MINIPBX_IMAGE=<namespace-dockerhub>/minipbx:0.1.1 docker compose -f docker-compose.hub.yml up -d
+```
+
 ## Configuration reseau recommandee
 
 En production Linux, garder le service `minipbx` par defaut, qui utilise `network_mode: host`.

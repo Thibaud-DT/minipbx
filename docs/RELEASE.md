@@ -67,3 +67,34 @@ docker compose logs --tail=100 minipbx
 ```
 
 Consulter ensuite l'interface MiniPBX et verifier la page Sante.
+
+## 7. Publier l'image Docker Hub
+
+Se connecter a Docker Hub :
+
+```bash
+docker login
+```
+
+Publier l'image multi-architecture avec le tag de `VERSION` et `latest` :
+
+```bash
+docker/publish.sh <namespace-dockerhub>/minipbx
+```
+
+Exemple :
+
+```bash
+docker/publish.sh moncompte/minipbx
+```
+
+Le script publie :
+
+- `<namespace-dockerhub>/minipbx:$(cat VERSION)`
+- `<namespace-dockerhub>/minipbx:latest`
+
+Pour limiter les architectures :
+
+```bash
+MINIPBX_DOCKER_PLATFORMS=linux/amd64 docker/publish.sh <namespace-dockerhub>/minipbx
+```

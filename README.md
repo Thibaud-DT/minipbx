@@ -179,6 +179,13 @@ Smoke test Docker :
 docker/smoke-test.sh
 ```
 
+Publication Docker Hub :
+
+```bash
+docker login
+docker/publish.sh <namespace-dockerhub>/minipbx
+```
+
 ## Etat initial implemente
 
 - Page d'accueil
