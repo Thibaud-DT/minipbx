@@ -72,6 +72,18 @@ exten => {{ pattern_prefix }}*21*0[1-9]XXXXXXXX,1,NoOp(Operator call forwarding 
  same => n(block),Playback(feature-not-avail-line)
  same => n,Hangup()
 
+exten => {{ prefix }}*21*,1,NoOp(Interactive operator call forwarding activation)
+ same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
+ same => n(allowed),Answer()
+ same => n,Read(FWD_NUMBER,beep,10,,1,20)
+ same => n,GotoIf($["${FWD_NUMBER}" : "^0[1-9][0-9]{8}$"]?dial:invalid)
+ same => n(dial),Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*21*${FWD_NUMBER})},60)
+ same => n,Hangup()
+ same => n(invalid),Playback(pbx-invalid)
+ same => n,Hangup()
+ same => n(block),Playback(feature-not-avail-line)
+ same => n,Hangup()
+
 exten => {{ prefix }}#21#,1,NoOp(Operator call forwarding deactivation)
  same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
  same => n(allowed),Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,%2321%23)},60)

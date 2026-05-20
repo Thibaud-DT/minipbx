@@ -305,9 +305,13 @@ def test_render_outbound_rules_with_prefix_and_international_block(tmp_path: Pat
 
     assert "exten => 915,1,NoOp(Emergency call 15)" in dialplan
     assert "exten => _9*21*0[1-9]XXXXXXXX,1,NoOp(Operator call forwarding activation)" in dialplan
+    assert "exten => 9*21*,1,NoOp(Interactive operator call forwarding activation)" in dialplan
     assert "exten => 9#21#,1,NoOp(Operator call forwarding deactivation)" in dialplan
     assert "exten => 9*#21#,1,NoOp(Operator call forwarding status)" in dialplan
     assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*21*${EXTEN:5})},60)" in dialplan
+    assert "Read(FWD_NUMBER,beep,10,,1,20)" in dialplan
+    assert 'GotoIf($["${FWD_NUMBER}" : "^0[1-9][0-9]{8}$"]?dial:invalid)' in dialplan
+    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*21*${FWD_NUMBER})},60)" in dialplan
     assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,%2321%23)},60)" in dialplan
     assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,%2A%2321%23)},60)" in dialplan
     assert "exten => _900X.,1,Playback(feature-not-avail-line)" in dialplan
