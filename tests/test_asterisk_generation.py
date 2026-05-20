@@ -304,6 +304,9 @@ def test_render_outbound_rules_with_prefix_and_international_block(tmp_path: Pat
     dialplan = render_configs(session, settings)["extensions_minipbx.conf"]
 
     assert "exten => 915,1,NoOp(Emergency call 15)" in dialplan
+    assert "exten => _9*21*0[1-9]XXXXXXXX,1,NoOp(Operator call forwarding activation)" in dialplan
+    assert "exten => 9#21#,1,NoOp(Operator call forwarding deactivation)" in dialplan
+    assert "exten => 9*#21#,1,NoOp(Operator call forwarding status)" in dialplan
     assert "exten => _900X.,1,Playback(feature-not-avail-line)" in dialplan
     assert "exten => _90[67]XXXXXXXX,1,NoOp(Mobile outbound call)" in dialplan
     assert "Dial(PJSIP/${EXTEN:1}@trunk-main,60)" in dialplan

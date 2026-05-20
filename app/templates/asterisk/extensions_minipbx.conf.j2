@@ -65,6 +65,27 @@ exten => {{ prefix }}{{ emergency }},1,NoOp(Emergency call {{ emergency }})
  same => n,Hangup()
 
 {% endfor %}
+exten => {{ pattern_prefix }}*21*0[1-9]XXXXXXXX,1,NoOp(Operator call forwarding activation)
+ same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
+ same => n(allowed),Dial(PJSIP/${EXTEN{% if prefix %}:{{ prefix | length }}{% endif %}}@trunk-main,60)
+ same => n,Hangup()
+ same => n(block),Playback(feature-not-avail-line)
+ same => n,Hangup()
+
+exten => {{ prefix }}#21#,1,NoOp(Operator call forwarding deactivation)
+ same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
+ same => n(allowed),Dial(PJSIP/${EXTEN{% if prefix %}:{{ prefix | length }}{% endif %}}@trunk-main,60)
+ same => n,Hangup()
+ same => n(block),Playback(feature-not-avail-line)
+ same => n,Hangup()
+
+exten => {{ prefix }}*#21#,1,NoOp(Operator call forwarding status)
+ same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
+ same => n(allowed),Dial(PJSIP/${EXTEN{% if prefix %}:{{ prefix | length }}{% endif %}}@trunk-main,60)
+ same => n,Hangup()
+ same => n(block),Playback(feature-not-avail-line)
+ same => n,Hangup()
+
 {% if outbound_rule and outbound_rule.allow_international %}
 exten => {{ pattern_prefix }}00X.,1,NoOp(International outbound call)
  same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
