@@ -25,6 +25,8 @@ exten => {{ extension.number }},1,Dial(PJSIP/{{ extension.sip_username }},20)
 exten => {{ group.number }},1,NoOp(Ring group {{ group.name }})
 {% if active_members %}
  same => n,Dial({% for member in active_members %}PJSIP/{{ member.extension.sip_username }}{% if not loop.last %}&{% endif %}{% endfor %},{{ group.timeout_seconds }})
+ same => n,NoOp(Ring group {{ group.number }} ended with DIALSTATUS=${DIALSTATUS})
+ same => n,GotoIf($["${DIALSTATUS}"="ANSWER"]?done)
 {% if group.fallback_type == "extension" and group.fallback_target %}
  same => n,Goto(minipbx-internal,{{ group.fallback_target }},1)
 {% elif group.fallback_type == "voicemail" and group.fallback_target %}
@@ -32,6 +34,7 @@ exten => {{ group.number }},1,NoOp(Ring group {{ group.name }})
 {% else %}
  same => n,Hangup()
 {% endif %}
+ same => n(done),Hangup()
 {% else %}
  same => n,Hangup()
 {% endif %}

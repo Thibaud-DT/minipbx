@@ -6,8 +6,19 @@ set -eu
 : "${ASTERISK_RTP_START:=10000}"
 : "${ASTERISK_RTP_END:=10100}"
 : "${MINIPBX_RUNTIME_USER:=asterisk}"
+: "${MINIPBX_TIMEZONE:=Europe/Paris}"
 
 mkdir -p /var/lib/minipbx/generated /var/lib/minipbx/backups /var/lib/minipbx/imports /var/lib/minipbx/prompts /var/log/asterisk/cdr-csv /var/spool/asterisk /var/run/asterisk /var/lib/asterisk /etc/asterisk
+
+if [ -f "/usr/share/zoneinfo/$MINIPBX_TIMEZONE" ]; then
+  export TZ="$MINIPBX_TIMEZONE"
+  if [ "$(id -u)" -eq 0 ]; then
+    ln -snf "/usr/share/zoneinfo/$MINIPBX_TIMEZONE" /etc/localtime
+    printf '%s\n' "$MINIPBX_TIMEZONE" > /etc/timezone
+  fi
+else
+  export TZ=UTC
+fi
 
 run_as_runtime_user() {
   if [ "$(id -u)" -eq 0 ]; then

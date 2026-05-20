@@ -249,7 +249,9 @@ def test_render_ring_group_and_inbound_route(tmp_path: Path):
     dialplan = configs["extensions_minipbx.conf"]
     assert "exten => 600,1,NoOp(Ring group Accueil)" in dialplan
     assert "Dial(PJSIP/100&PJSIP/101,20)" in dialplan
+    assert "NoOp(Ring group 600 ended with DIALSTATUS=${DIALSTATUS})" in dialplan
     assert "Goto(minipbx-internal,600,1)" in dialplan
+    assert "Goto(minipbx-voicemail,100,1)" in dialplan
 
 
 def test_render_outbound_rules_with_prefix_and_international_block(tmp_path: Path):

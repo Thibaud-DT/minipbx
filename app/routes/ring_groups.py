@@ -123,13 +123,13 @@ def _list_with_error(request: Request, db: Session, error: str) -> HTMLResponse:
             .order_by(RingGroup.number)
         )
     )
-
-
-def _safe_next(next_url: str, fallback: str) -> str:
-    return next_url if next_url.startswith("/") and not next_url.startswith("//") else fallback
     extensions = list(db.scalars(select(Extension).where(Extension.enabled.is_(True)).order_by(Extension.number)))
     return templates.TemplateResponse(
         "ring_groups/list.html",
         {"request": request, "ring_groups": ring_groups, "extensions": extensions, "error": error},
         status_code=400,
     )
+
+
+def _safe_next(next_url: str, fallback: str) -> str:
+    return next_url if next_url.startswith("/") and not next_url.startswith("//") else fallback
