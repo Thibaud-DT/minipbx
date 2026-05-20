@@ -41,18 +41,11 @@
         <option value="hangup" {% if menu.fallback_type == "hangup" %}selected{% endif %}>Raccrocher</option>
         <option value="extension" {% if menu.fallback_type == "extension" %}selected{% endif %}>Extension</option>
         <option value="ring_group" {% if menu.fallback_type == "ring_group" %}selected{% endif %}>Groupe d'appel</option>
+        <option value="external_number" {% if menu.fallback_type == "external_number" %}selected{% endif %}>Numero externe</option>
       </select>
     </label>
     <label>Cible secours
-      <select name="fallback_target">
-        <option value="">Aucune</option>
-        {% for extension in active_extensions %}
-          <option value="{{ extension.number }}" {% if menu.fallback_target == extension.number %}selected{% endif %}>Extension {{ extension.number }} - {{ extension.display_name }}</option>
-        {% endfor %}
-        {% for group in ring_groups %}
-          <option value="{{ group.number }}" {% if menu.fallback_target == group.number %}selected{% endif %}>Groupe {{ group.number }} - {{ group.name }}</option>
-        {% endfor %}
-      </select>
+      <input name="fallback_target" list="destination-targets" value="{{ menu.fallback_target or '' }}" placeholder="Extension, groupe ou numero externe">
     </label>
     <label class="check"><input name="enabled" type="checkbox" {% if menu.enabled %}checked{% endif %}> Actif</label>
     <fieldset class="ivr-options">
@@ -63,16 +56,9 @@
         <select name="option_destination_types" aria-label="Destination touche {{ option.digit }}">
           <option value="extension" {% if option.destination_type == "extension" %}selected{% endif %}>Extension</option>
           <option value="ring_group" {% if option.destination_type == "ring_group" %}selected{% endif %}>Groupe d'appel</option>
+          <option value="external_number" {% if option.destination_type == "external_number" %}selected{% endif %}>Numero externe</option>
         </select>
-        <select name="option_destination_targets" aria-label="Cible touche {{ option.digit }}" required>
-          <option value="">Aucune cible</option>
-          {% for extension in active_extensions %}
-            <option value="{{ extension.number }}" {% if option.destination_target == extension.number %}selected{% endif %}>Extension {{ extension.number }} - {{ extension.display_name }}</option>
-          {% endfor %}
-          {% for group in ring_groups %}
-            <option value="{{ group.number }}" {% if option.destination_target == group.number %}selected{% endif %}>Groupe {{ group.number }} - {{ group.name }}</option>
-          {% endfor %}
-        </select>
+        <input name="option_destination_targets" list="destination-targets" value="{{ option.destination_target }}" aria-label="Cible touche {{ option.digit }}" required>
       </div>
       {% else %}
       <div class="ivr-option-row">
@@ -80,16 +66,9 @@
         <select name="option_destination_types" aria-label="Destination touche 1">
           <option value="extension">Extension</option>
           <option value="ring_group">Groupe d'appel</option>
+          <option value="external_number">Numero externe</option>
         </select>
-        <select name="option_destination_targets" aria-label="Cible touche 1" required>
-          <option value="">Aucune cible</option>
-          {% for extension in active_extensions %}
-            <option value="{{ extension.number }}">Extension {{ extension.number }} - {{ extension.display_name }}</option>
-          {% endfor %}
-          {% for group in ring_groups %}
-            <option value="{{ group.number }}">Groupe {{ group.number }} - {{ group.name }}</option>
-          {% endfor %}
-        </select>
+        <input name="option_destination_targets" list="destination-targets" aria-label="Cible touche 1" required>
       </div>
       {% endfor %}
     </fieldset>
@@ -105,4 +84,13 @@
     <button type="submit" class="danger-button">Supprimer ce standard</button>
   </form>
 </section>
+
+<datalist id="destination-targets">
+  {% for extension in active_extensions %}
+    <option value="{{ extension.number }}">Extension {{ extension.display_name }}</option>
+  {% endfor %}
+  {% for group in ring_groups %}
+    <option value="{{ group.number }}">Groupe {{ group.name }}</option>
+  {% endfor %}
+</datalist>
 {% endblock %}

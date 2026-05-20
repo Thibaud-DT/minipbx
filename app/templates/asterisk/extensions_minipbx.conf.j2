@@ -9,6 +9,8 @@ Goto(minipbx-internal,{{ destination_target }},1)
 Goto(minipbx-internal,{{ destination_target }},1)
 {%- elif destination_type == "voicemail" and destination_target -%}
 Goto(minipbx-voicemail,{{ destination_target }},1)
+{%- elif destination_type == "external_number" and destination_target -%}
+Dial(PJSIP/{{ destination_target }}@trunk-main,60)
 {%- else -%}
 Hangup()
 {%- endif %}
@@ -31,6 +33,8 @@ exten => {{ group.number }},1,NoOp(Ring group {{ group.name }})
  same => n,Goto(minipbx-internal,{{ group.fallback_target }},1)
 {% elif group.fallback_type == "voicemail" and group.fallback_target %}
  same => n,Goto(minipbx-voicemail,{{ group.fallback_target }},1)
+{% elif group.fallback_type == "external_number" and group.fallback_target %}
+ same => n,Dial(PJSIP/{{ group.fallback_target }}@trunk-main,60)
 {% else %}
  same => n,Hangup()
 {% endif %}

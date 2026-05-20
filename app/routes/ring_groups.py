@@ -12,7 +12,8 @@ from app.templating import templates
 
 router = APIRouter(prefix="/ring-groups")
 NUMBER_RE = re.compile(r"^\d{2,6}$")
-FALLBACK_TYPES = {"hangup", "extension", "voicemail"}
+EXTERNAL_NUMBER_RE = re.compile(r"^\+?\d{6,20}$")
+FALLBACK_TYPES = {"hangup", "extension", "voicemail", "external_number"}
 
 
 def _guard(request: Request, db: Session) -> RedirectResponse | None:
@@ -108,8 +109,10 @@ def _validate_ring_group(
         return "Le timeout doit etre compris entre 5 et 120 secondes."
     if fallback_type not in FALLBACK_TYPES:
         return "Destination de secours invalide."
-    if fallback_type in {"extension", "voicemail"} and not fallback_target.strip():
+    if fallback_type in {"extension", "voicemail", "external_number"} and not fallback_target.strip():
         return "La destination de secours est obligatoire."
+    if fallback_type == "external_number" and not EXTERNAL_NUMBER_RE.match(fallback_target.strip()):
+        return "Le numero externe doit contenir 6 a 20 chiffres, avec + optionnel."
     if not member_ids:
         return "Le groupe doit contenir au moins une extension."
     return None

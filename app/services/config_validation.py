@@ -56,9 +56,10 @@ def validate_config(db: Session, settings: Settings) -> list[ConfigIssue]:
     if outbound_rule and not enabled_trunks:
         issues.append(ConfigIssue("warning", "Des regles sortantes existent mais aucun trunk actif n'est configure.", "outbound"))
 
-    _validate_ring_groups(issues, ring_groups, active_extensions, voicemail_extensions)
-    _validate_ivrs(issues, ivr_menus, active_extensions, active_groups)
-    _validate_inbound_routes(issues, inbound_routes, active_extensions, voicemail_extensions, active_groups, active_ivrs)
+    has_enabled_trunk = bool(enabled_trunks)
+    _validate_ring_groups(issues, ring_groups, active_extensions, voicemail_extensions, has_enabled_trunk)
+    _validate_ivrs(issues, ivr_menus, active_extensions, active_groups, has_enabled_trunk)
+    _validate_inbound_routes(issues, inbound_routes, active_extensions, voicemail_extensions, active_groups, active_ivrs, has_enabled_trunk)
     return issues
 
 
@@ -78,6 +79,7 @@ def _validate_ring_groups(
     ring_groups: list[RingGroup],
     active_extensions: dict[str, Extension],
     voicemail_extensions: dict[str, Extension],
+    has_enabled_trunk: bool,
 ) -> None:
     seen_numbers: set[str] = set()
     for group in ring_groups:
@@ -98,7 +100,8 @@ def _validate_ring_groups(
             voicemail_extensions=voicemail_extensions,
             active_groups={group.number: group for group in ring_groups},
             active_ivrs={},
-            allowed={"hangup", "extension", "voicemail"},
+            allowed={"hangup", "extension", "voicemail", "external_number"},
+            has_trunk=has_enabled_trunk,
             section="groups",
         )
 
@@ -108,6 +111,7 @@ def _validate_ivrs(
     ivr_menus: list[IvrMenu],
     active_extensions: dict[str, Extension],
     active_groups: dict[str, RingGroup],
+    has_enabled_trunk: bool,
 ) -> None:
     for menu in ivr_menus:
         if not menu.enabled:
@@ -134,7 +138,8 @@ def _validate_ivrs(
                 voicemail_extensions={},
                 active_groups=active_groups,
                 active_ivrs={},
-                allowed={"extension", "ring_group"},
+                allowed={"extension", "ring_group", "external_number"},
+                has_trunk=has_enabled_trunk,
                 section="ivr",
             )
         _validate_destination(
@@ -146,7 +151,8 @@ def _validate_ivrs(
             voicemail_extensions={},
             active_groups=active_groups,
             active_ivrs={},
-            allowed={"hangup", "extension", "ring_group"},
+            allowed={"hangup", "extension", "ring_group", "external_number"},
+            has_trunk=has_enabled_trunk,
             section="ivr",
         )
 
@@ -158,6 +164,7 @@ def _validate_inbound_routes(
     voicemail_extensions: dict[str, Extension],
     active_groups: dict[str, RingGroup],
     active_ivrs: dict[str, IvrMenu],
+    has_enabled_trunk: bool,
 ) -> None:
     seen_dids: set[str] = set()
     default_routes = 0
@@ -180,7 +187,8 @@ def _validate_inbound_routes(
             voicemail_extensions=voicemail_extensions,
             active_groups=active_groups,
             active_ivrs=active_ivrs,
-            allowed={"hangup", "extension", "ring_group", "ivr", "voicemail"},
+            allowed={"hangup", "extension", "ring_group", "ivr", "voicemail", "external_number"},
+            has_trunk=has_enabled_trunk,
             section="inbound",
         )
         _validate_destination(
@@ -192,7 +200,8 @@ def _validate_inbound_routes(
             voicemail_extensions=voicemail_extensions,
             active_groups=active_groups,
             active_ivrs=active_ivrs,
-            allowed={"hangup", "extension", "ring_group", "ivr", "voicemail"},
+            allowed={"hangup", "extension", "ring_group", "ivr", "voicemail", "external_number"},
+            has_trunk=has_enabled_trunk,
             section="inbound",
         )
     if default_routes > 1:
@@ -210,6 +219,7 @@ def _validate_destination(
     active_groups: dict[str, RingGroup],
     active_ivrs: dict[str, IvrMenu],
     allowed: set[str],
+    has_trunk: bool,
     section: str,
 ) -> None:
     if destination_type not in allowed:
@@ -229,3 +239,9 @@ def _validate_destination(
         issues.append(ConfigIssue("error", f"{label} : groupe d'appel introuvable ({target}).", section))
     if destination_type == "ivr" and target not in active_ivrs:
         issues.append(ConfigIssue("error", f"{label} : standard actif introuvable ({target}).", section))
+    if destination_type == "external_number":
+        normalized = target.removeprefix("+")
+        if not normalized.isdigit() or not 6 <= len(normalized) <= 20:
+            issues.append(ConfigIssue("error", f"{label} : numero externe invalide ({target}).", section))
+        if not has_trunk:
+            issues.append(ConfigIssue("error", f"{label} : aucun trunk actif pour appeler un numero externe.", section))

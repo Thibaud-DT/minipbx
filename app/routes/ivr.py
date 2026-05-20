@@ -15,10 +15,11 @@ from app.templating import templates
 
 router = APIRouter(prefix="/ivr")
 NUMBER_RE = re.compile(r"^\d{2,6}$")
+EXTERNAL_NUMBER_RE = re.compile(r"^\+?\d{6,20}$")
 DIGITS = {str(number) for number in range(10)}
 PROMPT_MODES = {"recording", "tts"}
-DESTINATION_TYPES = {"extension", "ring_group"}
-FALLBACK_TYPES = {"hangup", "extension", "ring_group"}
+DESTINATION_TYPES = {"extension", "ring_group", "external_number"}
+FALLBACK_TYPES = {"hangup", "extension", "ring_group", "external_number"}
 def _guard(request: Request, db: Session) -> RedirectResponse | None:
     if not has_admin(db):
         return RedirectResponse("/setup", status_code=303)
@@ -338,6 +339,8 @@ def _target_exists(db: Session, destination_type: str, target: str) -> bool:
         return bool(db.scalar(select(Extension.id).where(Extension.number == target)))
     if destination_type == "ring_group":
         return bool(db.scalar(select(RingGroup.id).where(RingGroup.number == target)))
+    if destination_type == "external_number":
+        return bool(EXTERNAL_NUMBER_RE.match(target.strip()))
     return False
 
 

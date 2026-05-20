@@ -11,11 +11,12 @@ from app.services.auth import current_admin, has_admin
 from app.templating import templates
 
 router = APIRouter(prefix="/inbound")
-DESTINATION_TYPES = {"extension", "ring_group", "ivr", "voicemail", "hangup"}
+DESTINATION_TYPES = {"extension", "ring_group", "ivr", "voicemail", "external_number", "hangup"}
 BUSINESS_DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DID_RE = re.compile(r"^\d{2,20}$")
+EXTERNAL_NUMBER_RE = re.compile(r"^\+?\d{6,20}$")
 
 
 def _guard(request: Request, db: Session) -> RedirectResponse | None:
@@ -216,6 +217,8 @@ def _validate_destination(destination_type: str, target: str) -> str | None:
         return "Type de destination invalide."
     if destination_type != "hangup" and not target.strip():
         return "La cible est obligatoire pour cette destination."
+    if destination_type == "external_number" and not EXTERNAL_NUMBER_RE.match(target.strip()):
+        return "Le numero externe doit contenir 6 a 20 chiffres, avec + optionnel."
     return None
 
 

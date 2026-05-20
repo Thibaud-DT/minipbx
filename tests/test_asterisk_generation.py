@@ -503,6 +503,81 @@ def test_render_inbound_business_hours(tmp_path: Path):
     assert "same => n(closed),Goto(minipbx-voicemail,101,1)" in dialplan
 
 
+def test_render_external_number_destinations_use_trunk(tmp_path: Path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+    extension = Extension(
+        number="100",
+        display_name="Accueil",
+        sip_username="100",
+        sip_secret="secret-100",
+        voicemail_enabled=True,
+        voicemail_pin="0100",
+        outbound_enabled=True,
+        inbound_enabled=True,
+        enabled=True,
+    )
+    session.add(extension)
+    session.flush()
+    group = RingGroup(
+        name="Commercial",
+        number="650",
+        timeout_seconds=10,
+        fallback_type="external_number",
+        fallback_target="0612345678",
+    )
+    group.members = [RingGroupMember(extension_id=extension.id)]
+    menu = IvrMenu(
+        name="Standard",
+        number="700",
+        prompt_mode="tts",
+        prompt_text="Tapez 1",
+        timeout_seconds=5,
+        fallback_type="external_number",
+        fallback_target="0622222222",
+        enabled=True,
+    )
+    menu.options = [IvrOption(digit="1", destination_type="external_number", destination_target="0633333333")]
+    session.add_all(
+        [
+            group,
+            menu,
+            InboundRoute(
+                name="Renvoi commercial",
+                did_number="300",
+                open_destination_type="external_number",
+                open_destination_target="0611111111",
+                closed_destination_type="hangup",
+            ),
+            SipTrunk(
+                name="Trunk",
+                host="sip.example.test",
+                username="account",
+                password_secret="secret",
+                transport="udp",
+                enabled=True,
+            ),
+        ]
+    )
+    session.commit()
+    settings = Settings(
+        secret_key="test",
+        data_dir=tmp_path,
+        generated_config_dir=tmp_path / "generated",
+        backup_dir=tmp_path / "backups",
+        asterisk_config_dir=tmp_path / "asterisk",
+        asterisk_apply_enabled=False,
+    )
+
+    dialplan = render_configs(session, settings)["extensions_minipbx.conf"]
+
+    assert "Dial(PJSIP/0611111111@trunk-main,60)" in dialplan
+    assert "Dial(PJSIP/0612345678@trunk-main,60)" in dialplan
+    assert "Dial(PJSIP/0622222222@trunk-main,60)" in dialplan
+    assert "exten => 1,1,Dial(PJSIP/0633333333@trunk-main,60)" in dialplan
+
+
 def test_render_multiple_inbound_routes_by_did(tmp_path: Path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
