@@ -78,6 +78,7 @@ autoload=no
 load => app_dial.so
 load => app_exec.so
 load => app_playback.so
+load => app_read.so
 load => app_stack.so
 load => app_verbose.so
 load => app_voicemail.so
