@@ -307,7 +307,7 @@ def test_render_outbound_rules_with_prefix_and_international_block(tmp_path: Pat
     assert "exten => _9*21*0[1-9]XXXXXXXX,1,NoOp(Operator call forwarding activation)" in dialplan
     assert "exten => 9#21#,1,NoOp(Operator call forwarding deactivation)" in dialplan
     assert "exten => 9*#21#,1,NoOp(Operator call forwarding status)" in dialplan
-    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,%2A21%2A${EXTEN:5})},60)" in dialplan
+    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*21*${EXTEN:5})},60)" in dialplan
     assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,%2321%23)},60)" in dialplan
     assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,%2A%2321%23)},60)" in dialplan
     assert "exten => _900X.,1,Playback(feature-not-avail-line)" in dialplan
