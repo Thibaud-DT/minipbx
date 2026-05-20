@@ -50,7 +50,8 @@ def collect_health(settings: Settings) -> HealthSummary:
         endpoints_ok=endpoints.ok,
         contacts_count=len(contacts),
         active_calls_count=len(channels),
-        trunk_registered=any(item.get("status") == "enregistre" for item in registrations.values()),
+        trunk_registered=any(item.get("status") == "enregistre" for item in registrations.values())
+        or contacts.get("trunk-main", {}).get("status") == "enregistre",
         recent_errors=errors.output,
     )
 

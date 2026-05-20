@@ -465,11 +465,19 @@
     <label>Nom
       <input name="name" value="{{ trunk.name if trunk else 'Trunk principal' }}" required>
     </label>
-    <label>Domaine ou IP operateur
-      <input name="host" value="{{ trunk.host if trunk else '' }}" placeholder="sip.operateur.example" required>
+    <label>Type
+      {% set current_kind = trunk.kind if trunk and trunk.kind else 'sip_provider' %}
+      <select name="kind">
+        <option value="sip_provider" {% if current_kind == 'sip_provider' %}selected{% endif %}>Operateur SIP</option>
+        <option value="analog_fxo" {% if current_kind == 'analog_fxo' %}selected{% endif %}>Passerelle analogique FXO</option>
+      </select>
+    </label>
+    <label>Domaine operateur ou IP passerelle
+      <input name="host" value="{{ trunk.host if trunk else '' }}" placeholder="sip.operateur.example ou 192.168.10.130" required>
     </label>
     <label>Identifiant
       <input name="username" value="{{ trunk.username if trunk else '' }}" autocomplete="off" required>
+      <small>Pour une passerelle FXO, c'est l'identifiant que le HT813 utilise pour s'enregistrer sur MiniPBX.</small>
     </label>
     <label>Mot de passe
       <input name="password" type="password" autocomplete="new-password" placeholder="{{ 'Laisser vide pour conserver' if trunk else '' }}" {% if not trunk %}required{% endif %}>
@@ -482,7 +490,7 @@
     </label>
     <label>IP/domaines entrants operateur
       <textarea name="inbound_match" rows="3" placeholder="Ex. 85.31.193.213&#10;ou sip.freepro.com">{{ trunk.inbound_match if trunk and trunk.inbound_match else '' }}</textarea>
-      <small>Utilise pour reconnaitre les INVITE entrants du trunk. Si vide, MiniPBX utilise le domaine operateur.</small>
+      <small>Pour une passerelle FXO, renseigner l'IP du HT813. Si vide, MiniPBX utilise le champ IP passerelle.</small>
     </label>
     <label>Transport
       <select name="transport">

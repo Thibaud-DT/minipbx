@@ -343,6 +343,46 @@ def test_render_trunk_identify_uses_inbound_match_or_host(tmp_path: Path):
     assert "match=85.31.193.214" in pjsip
 
 
+def test_render_analog_fxo_trunk_accepts_gateway_registration(tmp_path: Path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+    session.add(
+        SipTrunk(
+            name="HT813",
+            kind="analog_fxo",
+            host="192.168.10.130",
+            username="fxo900",
+            password_secret="secret-fxo",
+            inbound_match="192.168.10.130",
+            transport="udp",
+            enabled=True,
+        )
+    )
+    session.commit()
+    settings = Settings(
+        secret_key="test",
+        data_dir=tmp_path,
+        generated_config_dir=tmp_path / "generated",
+        backup_dir=tmp_path / "backups",
+        asterisk_config_dir=tmp_path / "asterisk",
+        asterisk_apply_enabled=False,
+    )
+
+    pjsip = render_configs(session, settings)["pjsip_minipbx.conf"]
+
+    assert "[trunk-main]" in pjsip
+    assert "auth=trunk-main-auth" in pjsip
+    assert "username=fxo900" in pjsip
+    assert "password=secret-fxo" in pjsip
+    assert "max_contacts=1" in pjsip
+    assert "remove_existing=yes" in pjsip
+    assert "qualify_frequency=60" in pjsip
+    assert "match=192.168.10.130" in pjsip
+    assert "[trunk-main-registration]" not in pjsip
+    assert "contact=sip:192.168.10.130" not in pjsip
+
+
 def test_render_ivr_menu_and_inbound_route(tmp_path: Path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)

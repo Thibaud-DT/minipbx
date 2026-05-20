@@ -37,13 +37,19 @@ qualify_frequency=60
 
 {% endfor %}
 {% if trunk %}
+{% set trunk_kind = trunk.kind or "sip_provider" %}
 [trunk-main]
 type=endpoint
 transport=transport-udp
 context=minipbx-inbound
 disallow=all
 allow=ulaw,alaw
+{% if trunk_kind == "analog_fxo" %}
+auth=trunk-main-auth
 outbound_auth=trunk-main-auth
+{% else %}
+outbound_auth=trunk-main-auth
+{% endif %}
 aors=trunk-main
 from_user={{ trunk.from_user or trunk.username }}
 from_domain={{ trunk.from_domain or trunk.host }}
@@ -60,7 +66,13 @@ password={{ trunk.password_secret }}
 
 [trunk-main]
 type=aor
+{% if trunk_kind == "analog_fxo" %}
+max_contacts=1
+remove_existing=yes
+qualify_frequency=60
+{% else %}
 contact=sip:{{ trunk.host }}
+{% endif %}
 
 [trunk-main-identify]
 type=identify
@@ -69,7 +81,7 @@ endpoint=trunk-main
 match={{ match }}
 {% endfor %}
 
-{% if trunk.host not in ["127.0.0", "127.0.0.1", "localhost"] %}
+{% if trunk_kind == "sip_provider" and trunk.host not in ["127.0.0", "127.0.0.1", "localhost"] %}
 [trunk-main-registration]
 type=registration
 outbound_auth=trunk-main-auth

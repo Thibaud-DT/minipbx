@@ -224,6 +224,45 @@ Configuration -> Generer une revision -> Appliquer / reload
 
 La configuration generee ajoute une section PJSIP `type=identify` pour rattacher les INVITE entrants au trunk.
 
+### Passerelle analogique FXO Grandstream HT813
+
+Pour raccorder une ligne analogique a MiniPBX, configurer le trunk principal en type `Passerelle analogique FXO`.
+
+Dans MiniPBX :
+
+```text
+Configuration -> Trunk SIP
+Type                            : Passerelle analogique FXO
+Domaine operateur ou IP passerelle : IP du HT813, ex. 192.168.10.130
+Identifiant                     : ex. fxo900
+Mot de passe                    : secret SIP dedie
+IP/domaines entrants operateur  : IP du HT813
+```
+
+Puis generer et appliquer la configuration.
+
+Sur le Grandstream HT813, dans le port FXO :
+
+```text
+Primary SIP Server    : IP MiniPBX, ex. 192.168.10.121
+SIP User ID           : fxo900
+Authenticate ID       : fxo900
+Authenticate Password : secret SIP configure dans MiniPBX
+SIP Registration      : Yes
+Local SIP Port        : 5062 ou autre port libre
+Preferred Vocoder     : PCMA/alaw puis PCMU/ulaw
+```
+
+Pour les appels entrants de la ligne analogique, configurer le HT813 pour envoyer les appels PSTN vers une destination MiniPBX, par exemple `100`, un groupe d'appel ou un standard vocal.
+
+Verification :
+
+```bash
+docker exec -it minipbx asterisk -C /etc/asterisk/asterisk.conf -rx "pjsip show contacts"
+```
+
+Le contact `trunk-main` doit apparaitre comme enregistre.
+
 ## Donnees persistantes
 
 Les donnees importantes sont stockees dans des volumes Docker :

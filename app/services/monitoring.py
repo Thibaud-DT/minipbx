@@ -184,13 +184,9 @@ def collect_monitoring_snapshot(db: Session, settings: Settings) -> MonitoringSn
                 host=trunk.host,
                 username=trunk.username,
                 enabled=trunk.enabled,
-                registered=registrations.get("trunk-main-registration", {}).get("registered", False),
-                status=(
-                    registrations.get("trunk-main-registration", {}).get("status", "non surveille")
-                    if trunk.enabled
-                    else "desactive"
-                ),
-                registration=registrations.get("trunk-main-registration", {}).get("registration", ""),
+                registered=_trunk_registered(trunk, contacts, registrations),
+                status=_trunk_status(trunk, contacts, registrations),
+                registration=_trunk_registration_label(trunk, contacts, registrations),
             )
             for trunk in trunks
         ],
@@ -304,6 +300,29 @@ def _channel_counts_by_extension(calls: list[ActiveCall]) -> dict[str, int]:
 
 def _contact_for_extension(extension: Extension, contacts: dict[str, dict[str, str]]) -> dict[str, str] | None:
     return contacts.get(extension.sip_username) or contacts.get(extension.number)
+
+
+def _trunk_registered(trunk: SipTrunk, contacts: dict[str, dict[str, str]], registrations: dict[str, dict[str, str | bool]]) -> bool:
+    if not trunk.enabled:
+        return False
+    if (trunk.kind or "sip_provider") == "analog_fxo":
+        contact = contacts.get("trunk-main")
+        return bool(contact and contact.get("status") == "enregistre")
+    return bool(registrations.get("trunk-main-registration", {}).get("registered", False))
+
+
+def _trunk_status(trunk: SipTrunk, contacts: dict[str, dict[str, str]], registrations: dict[str, dict[str, str | bool]]) -> str:
+    if not trunk.enabled:
+        return "desactive"
+    if (trunk.kind or "sip_provider") == "analog_fxo":
+        return (contacts.get("trunk-main") or {}).get("status", "non enregistre")
+    return str(registrations.get("trunk-main-registration", {}).get("status", "non surveille"))
+
+
+def _trunk_registration_label(trunk: SipTrunk, contacts: dict[str, dict[str, str]], registrations: dict[str, dict[str, str | bool]]) -> str:
+    if (trunk.kind or "sip_provider") == "analog_fxo":
+        return (contacts.get("trunk-main") or {}).get("uri", "trunk-main")
+    return str(registrations.get("trunk-main-registration", {}).get("registration", ""))
 
 
 def _normalize_contact_status(value: str) -> str:

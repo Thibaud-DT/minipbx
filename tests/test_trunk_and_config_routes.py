@@ -34,3 +34,32 @@ def test_save_trunk_masks_password_and_preview_config():
     assert "trunk-main-identify" in preview.text
     assert "match=85.31.193.213" in preview.text
     assert "match=85.31.193.214" in preview.text
+
+
+def test_save_analog_fxo_trunk_generates_dynamic_aor():
+    client = create_logged_client()
+
+    saved = client.post(
+        "/trunk",
+        data={
+            "name": "Grandstream HT813",
+            "kind": "analog_fxo",
+            "host": "192.168.10.130",
+            "username": "fxo900",
+            "password": "super-secret",
+            "from_user": "",
+            "from_domain": "",
+            "inbound_match": "192.168.10.130",
+            "transport": "udp",
+            "enabled": "on",
+        },
+        follow_redirects=False,
+    )
+    assert saved.status_code == 303
+
+    preview = client.get("/config/preview?selected=pjsip_minipbx.conf")
+    assert preview.status_code == 200
+    assert "Passerelle analogique FXO" in client.get("/trunk").text
+    assert "auth=trunk-main-auth" in preview.text
+    assert "max_contacts=1" in preview.text
+    assert "trunk-main-registration" not in preview.text

@@ -10,6 +10,7 @@ from app.templating import templates
 
 router = APIRouter(prefix="/trunk")
 TRANSPORTS = {"udp", "tcp", "tls"}
+TRUNK_KINDS = {"sip_provider", "analog_fxo"}
 
 
 def _guard(request: Request, db: Session) -> RedirectResponse | None:
@@ -33,6 +34,7 @@ def trunk_form(request: Request, db: Session = Depends(get_db)):
 def save_trunk(
     request: Request,
     name: str = Form("Trunk principal"),
+    kind: str = Form("sip_provider"),
     host: str = Form(...),
     username: str = Form(...),
     password: str = Form(""),
@@ -48,7 +50,7 @@ def save_trunk(
     if guarded:
         return guarded
     trunk = db.scalar(select(SipTrunk).order_by(SipTrunk.id).limit(1))
-    error = _validate_trunk(host, username, password, inbound_match, transport, trunk_exists=trunk is not None)
+    error = _validate_trunk(kind, host, username, password, inbound_match, transport, trunk_exists=trunk is not None)
     if error:
         return templates.TemplateResponse(
             "trunk/form.html",
@@ -59,6 +61,7 @@ def save_trunk(
     if trunk is None:
         trunk = SipTrunk(
             name=name.strip() or "Trunk principal",
+            kind=kind,
             host=host.strip(),
             username=username.strip(),
             password_secret=password,
@@ -70,6 +73,7 @@ def save_trunk(
         )
     else:
         trunk.name = name.strip() or "Trunk principal"
+        trunk.kind = kind
         trunk.host = host.strip()
         trunk.username = username.strip()
         if password:
@@ -85,6 +89,7 @@ def save_trunk(
 
 
 def _validate_trunk(
+    kind: str,
     host: str,
     username: str,
     password: str,
@@ -92,8 +97,10 @@ def _validate_trunk(
     transport: str,
     trunk_exists: bool,
 ) -> str | None:
+    if kind not in TRUNK_KINDS:
+        return "Le type de trunk est invalide."
     if not host.strip():
-        return "Le domaine ou l'adresse IP operateur est obligatoire."
+        return "Le domaine operateur ou l'adresse IP de la passerelle est obligatoire."
     if not username.strip():
         return "L'identifiant SIP est obligatoire."
     if transport not in TRANSPORTS:
