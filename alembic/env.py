@@ -57,6 +57,8 @@ def _detect_schema_revision(inspector, table_names: set[str]) -> str:
     """Best-effort stamp for databases created before Alembic was introduced."""
     if "pbx_settings" in table_names and "sip_trunks" in table_names:
         sip_trunk_columns = {column["name"] for column in inspector.get_columns("sip_trunks")}
+        if "fxo_stage_method" in sip_trunk_columns:
+            return "0012_trunk_fxo_stage_method"
         if "kind" in sip_trunk_columns:
             return "0011_trunk_kind"
         if "inbound_match" in sip_trunk_columns:

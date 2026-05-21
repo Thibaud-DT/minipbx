@@ -1,6 +1,6 @@
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import get_settings
@@ -31,6 +31,7 @@ def init_db() -> None:
         _run_migrations()
     else:
         Base.metadata.create_all(bind=engine)
+    _ensure_required_columns()
     _assert_required_schema()
 
 
@@ -65,3 +66,35 @@ def _assert_required_schema() -> None:
             f"Tables manquantes: {', '.join(missing)}. "
             "Verifie le volume /var/lib/minipbx et la table alembic_version."
         )
+    required_columns = {
+        "sip_trunks": {"inbound_match", "kind", "fxo_stage_method"},
+    }
+    missing_columns = []
+    for table_name, columns in required_columns.items():
+        existing_columns = {column["name"] for column in inspector.get_columns(table_name)}
+        missing_columns.extend(f"{table_name}.{column}" for column in sorted(columns - existing_columns))
+    if missing_columns:
+        raise RuntimeError(
+            "Schema SQLite incomplet apres migrations. "
+            f"Colonnes manquantes: {', '.join(missing_columns)}. "
+            "Verifie le volume /var/lib/minipbx et la table alembic_version."
+        )
+
+
+def _ensure_required_columns() -> None:
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    if "sip_trunks" not in table_names:
+        return
+    columns = {column["name"] for column in inspector.get_columns("sip_trunks")}
+    additive_columns = {
+        "inbound_match": "VARCHAR(500)",
+        "kind": "VARCHAR(30) NOT NULL DEFAULT 'sip_provider'",
+        "fxo_stage_method": "VARCHAR(1) NOT NULL DEFAULT '2'",
+    }
+    missing = [(name, definition) for name, definition in additive_columns.items() if name not in columns]
+    if not missing:
+        return
+    with engine.begin() as connection:
+        for name, definition in missing:
+            connection.execute(text(f"ALTER TABLE sip_trunks ADD COLUMN {name} {definition}"))
