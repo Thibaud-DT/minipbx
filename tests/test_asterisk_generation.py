@@ -453,6 +453,64 @@ def test_render_analog_fxo_outbound_uses_post_answer_dtmf(tmp_path: Path):
     assert "Dial(PJSIP/${EXTEN:1}@trunk-main,60)" not in dialplan
 
 
+def test_render_analog_fxo_stage_one_uses_direct_outbound_and_split_operator_codes(tmp_path: Path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+    session.add(
+        Extension(
+            number="100",
+            display_name="Poste 100",
+            sip_username="100",
+            sip_secret="secret-100",
+            voicemail_enabled=True,
+            voicemail_pin="0100",
+            outbound_enabled=True,
+            inbound_enabled=True,
+            enabled=True,
+        )
+    )
+    session.add(
+        SipTrunk(
+            name="HT813",
+            kind="analog_fxo",
+            fxo_stage_method="1",
+            host="192.168.10.130",
+            username="fxo900",
+            password_secret="secret-fxo",
+            inbound_match="192.168.10.130",
+            transport="udp",
+            enabled=True,
+        )
+    )
+    session.add(
+        OutboundRule(
+            name="Sortant",
+            prefix="9",
+            allow_national=True,
+            allow_mobile=True,
+            allow_international=True,
+            emergency_numbers="15,17,18,112",
+        )
+    )
+    session.commit()
+    settings = Settings(
+        secret_key="test",
+        data_dir=tmp_path,
+        generated_config_dir=tmp_path / "generated",
+        backup_dir=tmp_path / "backups",
+        asterisk_config_dir=tmp_path / "asterisk",
+        asterisk_apply_enabled=False,
+    )
+
+    dialplan = render_configs(session, settings)["extensions_minipbx.conf"]
+
+    assert "Dial(PJSIP/${EXTEN:1}@trunk-main,60)" in dialplan
+    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*21*)},60,D(ww${EXTEN:5:10}#))" in dialplan
+    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,%2321)},60,D(ww#))" in dialplan
+    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*%2321)},60,D(ww#))" in dialplan
+
+
 def test_render_ivr_menu_and_inbound_route(tmp_path: Path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)

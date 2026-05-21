@@ -11,6 +11,7 @@ from app.templating import templates
 router = APIRouter(prefix="/trunk")
 TRANSPORTS = {"udp", "tcp", "tls"}
 TRUNK_KINDS = {"sip_provider", "analog_fxo"}
+FXO_STAGE_METHODS = {"1", "2"}
 
 
 def _guard(request: Request, db: Session) -> RedirectResponse | None:
@@ -41,6 +42,7 @@ def save_trunk(
     from_user: str = Form(""),
     from_domain: str = Form(""),
     inbound_match: str = Form(""),
+    fxo_stage_method: str = Form("2"),
     transport: str = Form("udp"),
     enabled: bool = Form(False),
     next_url: str = Form(""),
@@ -50,7 +52,7 @@ def save_trunk(
     if guarded:
         return guarded
     trunk = db.scalar(select(SipTrunk).order_by(SipTrunk.id).limit(1))
-    error = _validate_trunk(kind, host, username, password, inbound_match, transport, trunk_exists=trunk is not None)
+    error = _validate_trunk(kind, host, username, password, inbound_match, fxo_stage_method, transport, trunk_exists=trunk is not None)
     if error:
         return templates.TemplateResponse(
             "trunk/form.html",
@@ -68,6 +70,7 @@ def save_trunk(
             from_user=from_user.strip() or None,
             from_domain=from_domain.strip() or None,
             inbound_match=_normalize_inbound_match(inbound_match) or None,
+            fxo_stage_method=fxo_stage_method,
             transport=transport,
             enabled=enabled,
         )
@@ -81,6 +84,7 @@ def save_trunk(
         trunk.from_user = from_user.strip() or None
         trunk.from_domain = from_domain.strip() or None
         trunk.inbound_match = _normalize_inbound_match(inbound_match) or None
+        trunk.fxo_stage_method = fxo_stage_method
         trunk.transport = transport
         trunk.enabled = enabled
     db.add(trunk)
@@ -94,6 +98,7 @@ def _validate_trunk(
     username: str,
     password: str,
     inbound_match: str,
+    fxo_stage_method: str,
     transport: str,
     trunk_exists: bool,
 ) -> str | None:
@@ -105,6 +110,8 @@ def _validate_trunk(
         return "L'identifiant SIP est obligatoire."
     if transport not in TRANSPORTS:
         return "Transport SIP invalide."
+    if fxo_stage_method not in FXO_STAGE_METHODS:
+        return "Le mode FXO doit etre 1 ou 2."
     if not trunk_exists and not password:
         return "Le mot de passe SIP est obligatoire a la creation."
     if any(char in inbound_match for char in [";", "#", "[", "]"]):

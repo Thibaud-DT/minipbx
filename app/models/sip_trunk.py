@@ -19,6 +19,7 @@ class SipTrunk(Base):
     from_domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
     inbound_match: Mapped[str | None] = mapped_column(String(500), nullable=True)
     kind: Mapped[str] = mapped_column(String(30), default="sip_provider")
+    fxo_stage_method: Mapped[str] = mapped_column(String(1), default="2")
     transport: Mapped[str] = mapped_column(String(20), default="udp")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

@@ -50,6 +50,7 @@ def test_save_analog_fxo_trunk_generates_dynamic_aor():
             "from_user": "",
             "from_domain": "",
             "inbound_match": "192.168.10.130",
+            "fxo_stage_method": "1",
             "transport": "udp",
             "enabled": "on",
         },
@@ -60,6 +61,7 @@ def test_save_analog_fxo_trunk_generates_dynamic_aor():
     preview = client.get("/config/preview?selected=pjsip_minipbx.conf")
     assert preview.status_code == 200
     assert "Passerelle analogique FXO" in client.get("/trunk").text
+    assert "Stage Method 1" in client.get("/trunk").text
     assert "auth=trunk-main-auth" in preview.text
     assert "max_contacts=1" in preview.text
     assert "trunk-main-registration" not in preview.text

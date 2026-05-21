@@ -477,6 +477,14 @@
       <textarea name="inbound_match" rows="3" placeholder="Ex. 85.31.193.213&#10;ou sip.freepro.com">{{ trunk.inbound_match if trunk and trunk.inbound_match else '' }}</textarea>
       <small>Pour une passerelle FXO, renseigner l'IP du HT813. Si vide, MiniPBX utilise le champ IP passerelle.</small>
     </label>
+    <label>Mode FXO
+      {% set current_stage = trunk.fxo_stage_method if trunk and trunk.fxo_stage_method else '2' %}
+      <select name="fxo_stage_method">
+        <option value="2" {% if current_stage == '2' %}selected{% endif %}>Stage Method 2</option>
+        <option value="1" {% if current_stage == '1' %}selected{% endif %}>Stage Method 1</option>
+      </select>
+      <small>Uniquement pour une passerelle analogique FXO. Le mode doit correspondre au reglage Stage Method du HT813.</small>
+    </label>
     <label>Transport
       <select name="transport">
         {% set current_transport = trunk.transport if trunk else 'udp' %}
