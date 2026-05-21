@@ -74,7 +74,7 @@ exten => {{ pattern_prefix }}*21*0[1-9]XXXXXXXX,1,NoOp(Operator call forwarding 
 
 exten => {{ pattern_prefix }}*21*0[1-9]XXXXXXXX#,1,NoOp(Operator call forwarding activation with terminator)
  same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
- same => n(allowed),Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,trunk-main)},60,D(ww*21*${EXTEN:{{ prefix | length + 4 }}:10}#))
+ same => n(allowed),Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*21*${EXTEN:{{ prefix | length + 4 }}:10})},60,D(ww#))
  same => n,Hangup()
  same => n(block),Playback(feature-not-avail-line)
  same => n,Hangup()
@@ -93,14 +93,14 @@ exten => {{ prefix }}*21*,1,NoOp(Interactive operator call forwarding activation
 
 exten => {{ prefix }}#21#,1,NoOp(Operator call forwarding deactivation)
  same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
- same => n(allowed),Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,trunk-main)},60,D(ww#21#))
+ same => n(allowed),Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,%2321)},60,D(ww#))
  same => n,Hangup()
  same => n(block),Playback(feature-not-avail-line)
  same => n,Hangup()
 
 exten => {{ prefix }}*#21#,1,NoOp(Operator call forwarding status)
  same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
- same => n(allowed),Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,trunk-main)},60,D(ww*#21#))
+ same => n(allowed),Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*%2321)},60,D(ww#))
  same => n,Hangup()
  same => n(block),Playback(feature-not-avail-line)
  same => n,Hangup()

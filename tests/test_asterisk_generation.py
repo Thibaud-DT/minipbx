@@ -310,12 +310,12 @@ def test_render_outbound_rules_with_prefix_and_international_block(tmp_path: Pat
     assert "exten => 9#21#,1,NoOp(Operator call forwarding deactivation)" in dialplan
     assert "exten => 9*#21#,1,NoOp(Operator call forwarding status)" in dialplan
     assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*21*${EXTEN:5})},60)" in dialplan
-    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,trunk-main)},60,D(ww*21*${EXTEN:5:10}#))" in dialplan
+    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*21*${EXTEN:5:10})},60,D(ww#))" in dialplan
     assert "Read(FWD_NUMBER,beep,10,,1,20)" in dialplan
     assert 'GotoIf($["${FWD_NUMBER}" : "^0[1-9][0-9]{8}$"]?dial:invalid)' in dialplan
     assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*21*${FWD_NUMBER})},60)" in dialplan
-    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,trunk-main)},60,D(ww#21#))" in dialplan
-    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,trunk-main)},60,D(ww*#21#))" in dialplan
+    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,%2321)},60,D(ww#))" in dialplan
+    assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,*%2321)},60,D(ww#))" in dialplan
     assert "exten => _900X.,1,Playback(feature-not-avail-line)" in dialplan
     assert "exten => _90[67]XXXXXXXX,1,NoOp(Mobile outbound call)" in dialplan
     assert "Dial(PJSIP/${EXTEN:1}@trunk-main,60)" in dialplan
