@@ -8,9 +8,11 @@
   </div>
   <div class="actions">
     <form method="post" action="/config/generate">
-      <button type="submit">Generer une revision</button>
+      <input name="next_url" type="hidden" value="/config/preview">
+      <button type="submit">Forcer la generation</button>
     </form>
     <form method="post" action="/config/apply">
+      <input name="next_url" type="hidden" value="/config/preview">
       <button type="submit">Appliquer / reload</button>
     </form>
   </div>

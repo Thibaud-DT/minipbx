@@ -52,8 +52,14 @@ def test_config_preview_shows_revision_history_and_applies_selected_revision():
     assert preview.status_code == 200
     assert "Historique des revisions" in preview.text
     assert "Test de configuration" in preview.text
+    assert "Forcer la generation" in preview.text
+    assert 'name="next_url" type="hidden" value="/config/preview"' in preview.text
     assert "5 fichiers generes" in preview.text
     assert 'action="/config/revisions/1/apply"' in preview.text
+
+    forced = client.post("/config/generate", data={"next_url": "/config/preview"}, follow_redirects=False)
+    assert forced.status_code == 303
+    assert forced.headers["location"] == "/config/preview"
 
     applied = client.post("/config/revisions/1/apply", follow_redirects=False)
     assert applied.status_code == 303
@@ -63,3 +69,6 @@ def test_config_preview_shows_revision_history_and_applies_selected_revision():
         revision = db.get(ConfigRevision, 1)
         assert revision is not None
         assert revision.status == "applied"
+        forced_revision = db.get(ConfigRevision, 2)
+        assert forced_revision is not None
+        assert forced_revision.status == "generated"
