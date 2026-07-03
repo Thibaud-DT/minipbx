@@ -304,6 +304,10 @@ def test_render_outbound_rules_with_prefix_and_international_block(tmp_path: Pat
     dialplan = render_configs(session, settings)["extensions_minipbx.conf"]
 
     assert "exten => 915,1,NoOp(Emergency call 15)" in dialplan
+    assert "exten => _9XX,1,NoOp(Short emergency/service call)" in dialplan
+    assert "exten => _9XXX,1,NoOp(Short emergency/service call)" in dialplan
+    assert "exten => _9XXXX,1,NoOp(Short service call)" in dialplan
+    assert "exten => _9XXXXX,1,NoOp(Short service call)" in dialplan
     assert "exten => _9*21*0[1-9]XXXXXXXX,1,NoOp(Operator call forwarding activation)" in dialplan
     assert "exten => _9*21*0[1-9]XXXXXXXX#,1,NoOp(Operator call forwarding activation with terminator)" in dialplan
     assert "exten => 9*21*,1,NoOp(Interactive operator call forwarding activation)" in dialplan
@@ -449,6 +453,7 @@ def test_render_analog_fxo_outbound_uses_post_answer_dtmf(tmp_path: Path):
     dialplan = render_configs(session, settings)["extensions_minipbx.conf"]
 
     assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,trunk-main)},60,D(ww15))" in dialplan
+    assert "exten => _9XXXX,1,NoOp(Short service call)" in dialplan
     assert "Dial(${PJSIP_DIAL_CONTACTS(trunk-main,,trunk-main)},60,D(ww${EXTEN:1}))" in dialplan
     assert "Dial(PJSIP/${EXTEN:1}@trunk-main,60)" not in dialplan
 

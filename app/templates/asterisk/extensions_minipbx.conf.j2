@@ -91,6 +91,34 @@ exten => {{ prefix }}{{ emergency }},1,NoOp(Emergency call {{ emergency }})
  same => n,Hangup()
 
 {% endfor %}
+exten => {{ pattern_prefix }}XX,1,NoOp(Short emergency/service call)
+ same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
+ same => n(allowed),{{ dial_external("${EXTEN" ~ (":" ~ prefix | length if prefix else "") ~ "}") }}
+ same => n,Hangup()
+ same => n(block),Playback(feature-not-avail-line)
+ same => n,Hangup()
+
+exten => {{ pattern_prefix }}XXX,1,NoOp(Short emergency/service call)
+ same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
+ same => n(allowed),{{ dial_external("${EXTEN" ~ (":" ~ prefix | length if prefix else "") ~ "}") }}
+ same => n,Hangup()
+ same => n(block),Playback(feature-not-avail-line)
+ same => n,Hangup()
+
+exten => {{ pattern_prefix }}XXXX,1,NoOp(Short service call)
+ same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
+ same => n(allowed),{{ dial_external("${EXTEN" ~ (":" ~ prefix | length if prefix else "") ~ "}") }}
+ same => n,Hangup()
+ same => n(block),Playback(feature-not-avail-line)
+ same => n,Hangup()
+
+exten => {{ pattern_prefix }}XXXXX,1,NoOp(Short service call)
+ same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
+ same => n(allowed),{{ dial_external("${EXTEN" ~ (":" ~ prefix | length if prefix else "") ~ "}") }}
+ same => n,Hangup()
+ same => n(block),Playback(feature-not-avail-line)
+ same => n,Hangup()
+
 exten => {{ pattern_prefix }}*21*0[1-9]XXXXXXXX,1,NoOp(Operator call forwarding activation)
  same => n,GotoIf($["${CALLERID(num)}" : "^({{ caller_pattern }})$"]?allowed:block)
  same => n(allowed),{{ dial_operator_activation("${EXTEN:" ~ (prefix | length + 4) ~ "}") }}
